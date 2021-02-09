@@ -3,7 +3,7 @@ import XCTest
 
 final class AuthTests: XCTestCase {
     func testBcrypt() throws {
-        let hash = try XCTUnwrap(Bcrypt.hash("password", numberOfRounds: 30))
+        let hash = try XCTUnwrap(Bcrypt.hash("password"))
         XCTAssert(Bcrypt.verify("password", hash: hash))
     }
 }

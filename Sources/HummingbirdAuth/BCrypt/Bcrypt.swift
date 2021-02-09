@@ -8,14 +8,14 @@ public enum Bcrypt {
     /// Generate bcrypt hash from test
     /// - Parameters:
     ///   - text: original text
-    ///   - cost: log2 iterations
+    ///   - cost: log2 iterations of algorithm
     /// - Returns: Hashed string
     public static func hash(_ text: String, cost: UInt8 = 12) -> String? {
-        guard numberOfRounds >= BCRYPT_MINLOGROUNDS, numberOfRounds <= 31 else {
+        guard cost >= BCRYPT_MINLOGROUNDS, cost <= 31 else {
             preconditionFailure("Cost should be between 4 and 31")
         }
 
-        guard let salt = bcrypt_gensalt(numberOfRounds) else { return nil }
+        guard let salt = bcrypt_gensalt(cost) else { return nil }
         guard let hashedData = bcrypt(text, salt) else { return nil }
         return String(cString: hashedData)
     }

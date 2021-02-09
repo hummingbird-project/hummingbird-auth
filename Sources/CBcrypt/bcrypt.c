@@ -32,7 +32,6 @@
  */
 
 #include <sys/types.h>
-#include "blf.h"
 #include <ctype.h>
 #include <errno.h>
 #include <pwd.h>
@@ -40,6 +39,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include "blf.h"
 #include "bcrypt.h"
 
 /* This implementation is adaptable to current computing power.
