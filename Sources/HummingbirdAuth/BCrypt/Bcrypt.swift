@@ -10,13 +10,15 @@ public enum Bcrypt {
     ///   - text: original text
     ///   - cost: log2 iterations of algorithm
     /// - Returns: Hashed string
-    public static func hash(_ text: String, cost: UInt8 = 12) -> String? {
+    public static func hash(_ text: String, cost: UInt8 = 12) -> String {
         guard cost >= BCRYPT_MINLOGROUNDS, cost <= 31 else {
             preconditionFailure("Cost should be between 4 and 31")
         }
 
-        guard let salt = bcrypt_gensalt(cost) else { return nil }
-        guard let hashedData = bcrypt(text, salt) else { return nil }
+        // can guarantee salt if non nil
+        let salt = bcrypt_gensalt(cost)!
+        // can guarantee hash data is valid as salt was created correctly
+        let hashedData = bcrypt(text, salt)!
         return String(cString: hashedData)
     }
     
@@ -25,12 +27,6 @@ public enum Bcrypt {
     ///   - text: plain text
     ///   - hash: hashed data
     public static func verify(_ text: String, hash: String) -> Bool {
-        // read salt
-        let salt = hash.prefix(29)
-        guard salt.count == 29 else { return false }
-        
-        guard let hashedData = bcrypt(text, String(salt)) else { return false }
-        let hashString = String(cString: hashedData)
-        return hashString == hash
+        return bcrypt_checkpass(text, hash) == 0
     }
 }

@@ -44,3 +44,4 @@
 char *bcrypt_gensalt(u_int8_t);
 char *bcrypt(const char *pass, const char *salt);
 int bcrypt_hashpass(const char *key, const char *salt, char *encrypted, size_t encryptedlen);
+int bcrypt_checkpass(const char *pass, const char *goodhash);
