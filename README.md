@@ -1,3 +1,3 @@
-# hummingbird-auth
+# Hummingbird Auth
 
-A description of this package.
+Authentication extensions for Hummingbird server framework
