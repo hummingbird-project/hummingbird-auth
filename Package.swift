@@ -19,6 +19,9 @@ let package = Package(
             .product(name: "Hummingbird", package: "hummingbird"),
         ]),
         .target(name: "CBcrypt", dependencies: []),
-        .testTarget(name: "HummingbirdAuthTests", dependencies: ["HummingbirdAuth"]),
+        .testTarget(name: "HummingbirdAuthTests", dependencies: [
+            .byName(name: "HummingbirdAuth"),
+            .product(name: "HummingbirdXCT", package: "hummingbird"),
+        ]),
     ]
 )
