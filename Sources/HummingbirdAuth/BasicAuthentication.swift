@@ -1,5 +1,5 @@
-import Hummingbird
 import ExtrasBase64
+import Hummingbird
 
 /// Basic authentication information extracted from request header "Authorization"
 public struct BasicAuthentication {

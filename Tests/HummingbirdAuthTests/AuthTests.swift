@@ -1,5 +1,5 @@
-import XCTest
 @testable import HummingbirdAuth
+import XCTest
 
 final class AuthTests: XCTestCase {
     func testBcrypt() {
