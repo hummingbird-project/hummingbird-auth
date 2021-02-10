@@ -31,6 +31,8 @@
  *
  */
 
+#include <stdint.h>
+#include <sys/types.h>
 #include <ctype.h>
 
 #define BCRYPT_VERSION '2'
@@ -41,7 +43,9 @@
 #define    BCRYPT_SALTSPACE    (7 + (BCRYPT_MAXSALT * 4 + 2) / 3 + 1)
 #define    BCRYPT_HASHSPACE    61
 
-char *bcrypt_gensalt(u_int8_t);
+/// generate salt given a cost and random buffer of 16 bytes
+char *bcrypt_gensalt_with_csalt(u_int8_t cost, const uint8_t *csalt);
+/// encrypt `pass` using `salt`
 char *bcrypt(const char *pass, const char *salt);
-int bcrypt_hashpass(const char *key, const char *salt, char *encrypted, size_t encryptedlen);
+/// check `pass` against hash
 int bcrypt_checkpass(const char *pass, const char *goodhash);

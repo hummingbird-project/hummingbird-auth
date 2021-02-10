@@ -46,6 +46,8 @@
  * You can have up to 2^31 rounds which should be enough for some
  * time to come.
  */
+// timingsafe_bcmp is unavailable so use memcmp
+#define timingsafe_bcmp memcmp
 
 static int encode_base64(char *, const u_int8_t *, size_t);
 static int decode_base64(u_int8_t *, size_t, const char *);
@@ -57,16 +59,12 @@ static int decode_base64(u_int8_t *, size_t, const char *);
  * Generates a salt for this version of crypt.
  */
 static int
-bcrypt_initsalt(int log_rounds, char *salt, size_t saltbuflen)
+bcrypt_initsalt_with_csalt(int log_rounds, char *salt, size_t saltbuflen, const uint8_t *csalt)
 {
-    uint8_t csalt[BCRYPT_MAXSALT];
-
     if (saltbuflen < BCRYPT_SALTSPACE) {
         errno = EINVAL;
         return -1;
     }
-
-    arc4random_buf(csalt, sizeof(csalt));
 
     if (log_rounds < 4)
         log_rounds = 4;
@@ -74,7 +72,7 @@ bcrypt_initsalt(int log_rounds, char *salt, size_t saltbuflen)
         log_rounds = 31;
 
     snprintf(salt, saltbuflen, "$2b$%2.2u$", log_rounds);
-    encode_base64(salt + 7, csalt, sizeof(csalt));
+    encode_base64(salt + 7, csalt, BCRYPT_MAXSALT);
 
     return 0;
 }
@@ -192,25 +190,6 @@ inval:
     errno = EINVAL;
     return -1;
 }
-
-/*
- * user friendly functions
- */
-int
-bcrypt_newhash(const char *pass, int log_rounds, char *hash, size_t hashlen)
-{
-    char salt[BCRYPT_SALTSPACE];
-
-    if (bcrypt_initsalt(log_rounds, salt, sizeof(salt)) != 0)
-        return -1;
-
-    if (bcrypt_hashpass(pass, salt, hash, hashlen) != 0)
-        return -1;
-
-    explicit_bzero(salt, sizeof(salt));
-    return 0;
-}
-DEF_WEAK(bcrypt_newhash);
 
 int
 bcrypt_checkpass(const char *pass, const char *goodhash)
@@ -335,11 +314,11 @@ encode_base64(char *b64buffer, const u_int8_t *data, size_t len)
  * classic interface
  */
 char *
-bcrypt_gensalt(u_int8_t log_rounds)
+bcrypt_gensalt_with_csalt(u_int8_t log_rounds, const u_int8_t *csalt)
 {
     static char    gsalt[BCRYPT_SALTSPACE];
 
-    bcrypt_initsalt(log_rounds, gsalt, sizeof(gsalt));
+    bcrypt_initsalt_with_csalt(log_rounds, gsalt, sizeof(gsalt), csalt);
 
     return gsalt;
 }

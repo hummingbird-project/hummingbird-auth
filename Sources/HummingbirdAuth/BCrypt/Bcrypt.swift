@@ -15,8 +15,13 @@ public enum Bcrypt {
             preconditionFailure("Cost should be between 4 and 31")
         }
 
+        // create random salt here, instead of using C as arc4random_buf is not always available
+        let csalt: [UInt8] = (0..<BCRYPT_MAXSALT).map { _ in UInt8.random(in: (.min)...(.max)) }
         // can guarantee salt if non nil
-        let salt = bcrypt_gensalt(cost)!
+        let salt = csalt.withUnsafeBufferPointer {
+            bcrypt_gensalt_with_csalt(cost, $0.baseAddress)!
+        }
+
         // can guarantee hash data is valid as salt was created correctly
         let hashedData = bcrypt(text, salt)!
         return String(cString: hashedData)

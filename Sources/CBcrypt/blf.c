@@ -41,7 +41,7 @@
  */
 
 #include <sys/param.h>
-
+#include <bcrypt.h>
 #include "blf.h"
 
 #undef inline
