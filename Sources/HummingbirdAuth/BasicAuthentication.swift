@@ -1,12 +1,14 @@
 import Hummingbird
 import ExtrasBase64
 
+/// Basic authentication information extracted from request header "Authorization"
 public struct BasicAuthentication {
     public let username: String
     public let password: String
 }
 
 extension HBRequest.Auth {
+    /// Return Basic (username/password) authorization information from request
     public var basic: BasicAuthentication? {
         // check for authorization header
         guard let authorization = request.headers["Authorization"].first else { return nil }

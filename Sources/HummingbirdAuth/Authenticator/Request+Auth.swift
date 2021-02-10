@@ -1,8 +1,9 @@
 import Hummingbird
 
 extension HBRequest {
+    /// Wrapper for authentication framework within `HBRequest`
     public struct Auth {
-        /// Login with type
+        /// Login with authenticatable object. Make object available to request via `Auth.get`
         /// - Parameter auth: authentication details
         public func login<Auth: HBAuthenticatable>(_ auth: Auth) {
             var logins = self.loginCache ?? [:]
@@ -10,7 +11,7 @@ extension HBRequest {
             self.request.extensions.set(\.auth.loginCache, value: logins)
         }
 
-        /// Logout type
+        /// Logout authenticatable object. Removes object from request
         /// - Parameter auth: authentication type
         public func logout<Auth: HBAuthenticatable>(_: Auth.Type) {
             if var logins = self.loginCache {

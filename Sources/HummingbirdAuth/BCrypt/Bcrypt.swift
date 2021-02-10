@@ -1,6 +1,6 @@
 import CBcrypt
 
-/// bcrypt is a password-hashing function designed by Niels Provos and David Mazières, based on the Blowfish cipher
+/// Bcrypt is a password-hashing function designed by Niels Provos and David Mazières, based on the Blowfish cipher
 /// and presented at USENIX in 1999.[1] Besides incorporating a salt to protect against rainbow table attacks, bcrypt
 /// is an adaptive function: over time, the iteration count can be increased to make it slower, so it remains resistant to
 /// brute-force search attacks even with increasing computation power. 
