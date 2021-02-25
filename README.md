@@ -41,3 +41,7 @@ func current(_ request: HBRequest) throws -> User {
     return user
 }
 ```
+
+## Documentation
+
+You can find reference documentation for HummingbirdAuth [here](https://hummingbird-project.github.io/hummingbird/current/hummingbird-auth/index.html). The [hummingbird-examples](https://github.com/hummingbird-project/hummingbird-examples) repository has a number of examples of different uses of the library.
