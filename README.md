@@ -1,6 +1,8 @@
 # Hummingbird Auth
 
-Authentication framwork and extensions for Hummingbird server framework.
+Authentication framework and extensions for Hummingbird server framework.
+
+Includes Authenticator middleware setup, bearer, basic authentication extraction from your Request headers, Bcrypt encryption for passwords.
 
 ## Authenticators
 
