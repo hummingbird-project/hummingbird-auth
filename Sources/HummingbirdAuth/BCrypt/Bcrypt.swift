@@ -1,4 +1,4 @@
-import CBcrypt
+@_implementationOnly import CBcrypt
 
 /// Bcrypt is a password-hashing function designed by Niels Provos and David Mazières, based on the Blowfish cipher
 /// and presented at USENIX in 1999.[1] Besides incorporating a salt to protect against rainbow table attacks, bcrypt
@@ -19,11 +19,11 @@ public enum Bcrypt {
         let csalt: [UInt8] = (0..<BCRYPT_MAXSALT).map { _ in UInt8.random(in: (.min)...(.max)) }
         // can guarantee salt if non nil
         let salt = csalt.withUnsafeBufferPointer {
-            bcrypt_gensalt_with_csalt(cost, $0.baseAddress)!
+            c_hb_bcrypt_gensalt_with_csalt(cost, $0.baseAddress)!
         }
 
         // can guarantee hash data is valid as salt was created correctly
-        let hashedData = bcrypt(text, salt)!
+        let hashedData = c_hb_bcrypt(text, salt)!
         return String(cString: hashedData)
     }
 
@@ -32,6 +32,6 @@ public enum Bcrypt {
     ///   - text: plain text
     ///   - hash: hashed data
     public static func verify(_ text: String, hash: String) -> Bool {
-        return bcrypt_checkpass(text, hash) == 0
+        return c_hb_bcrypt_checkpass(text, hash) == 0
     }
 }

@@ -81,7 +81,7 @@ bcrypt_initsalt_with_csalt(int log_rounds, char *salt, size_t saltbuflen, const 
  * the core bcrypt function
  */
 int
-bcrypt_hashpass(const char *key, const char *salt, char *encrypted,
+c_hb_bcrypt_hashpass(const char *key, const char *salt, char *encrypted,
     size_t encryptedlen)
 {
     blf_ctx state;
@@ -192,11 +192,11 @@ inval:
 }
 
 int
-bcrypt_checkpass(const char *pass, const char *goodhash)
+c_hb_bcrypt_checkpass(const char *pass, const char *goodhash)
 {
     char hash[BCRYPT_HASHSPACE];
 
-    if (bcrypt_hashpass(pass, goodhash, hash, sizeof(hash)) != 0)
+    if (c_hb_bcrypt_hashpass(pass, goodhash, hash, sizeof(hash)) != 0)
         return -1;
     if (strlen(hash) != strlen(goodhash) ||
         timingsafe_bcmp(hash, goodhash, strlen(goodhash)) != 0) {
@@ -314,7 +314,7 @@ encode_base64(char *b64buffer, const u_int8_t *data, size_t len)
  * classic interface
  */
 char *
-bcrypt_gensalt_with_csalt(u_int8_t log_rounds, const u_int8_t *csalt)
+c_hb_bcrypt_gensalt_with_csalt(u_int8_t log_rounds, const u_int8_t *csalt)
 {
     static char    gsalt[BCRYPT_SALTSPACE];
 
@@ -324,11 +324,11 @@ bcrypt_gensalt_with_csalt(u_int8_t log_rounds, const u_int8_t *csalt)
 }
 
 char *
-bcrypt(const char *pass, const char *salt)
+c_hb_bcrypt(const char *pass, const char *salt)
 {
     static char    gencrypted[BCRYPT_HASHSPACE];
 
-    if (bcrypt_hashpass(pass, salt, gencrypted, sizeof(gencrypted)) != 0)
+    if (c_hb_bcrypt_hashpass(pass, salt, gencrypted, sizeof(gencrypted)) != 0)
         return NULL;
 
     return gencrypted;

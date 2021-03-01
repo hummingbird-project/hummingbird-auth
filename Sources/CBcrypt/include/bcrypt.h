@@ -44,8 +44,8 @@
 #define    BCRYPT_HASHSPACE    61
 
 /// generate salt given a cost and random buffer of 16 bytes
-char *bcrypt_gensalt_with_csalt(u_int8_t cost, const uint8_t *csalt);
+char *c_hb_bcrypt_gensalt_with_csalt(u_int8_t cost, const uint8_t *csalt);
 /// encrypt `pass` using `salt`
-char *bcrypt(const char *pass, const char *salt);
+char *c_hb_bcrypt(const char *pass, const char *salt);
 /// check `pass` against hash
-int bcrypt_checkpass(const char *pass, const char *goodhash);
+int c_hb_bcrypt_checkpass(const char *pass, const char *goodhash);
