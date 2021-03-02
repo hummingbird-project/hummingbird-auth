@@ -111,16 +111,16 @@ final class AuthTests: XCTestCase {
     func testHOTP() {
         // test against RFC4226 example values https://tools.ietf.org/html/rfc4226#page-32
         let secret = "12345678901234567890"
-        XCTAssertEqual(OTP.computeHOTP(counter: 0, secret: secret), 755_224)
-        XCTAssertEqual(OTP.computeHOTP(counter: 1, secret: secret), 287_082)
-        XCTAssertEqual(OTP.computeHOTP(counter: 2, secret: secret), 359_152)
-        XCTAssertEqual(OTP.computeHOTP(counter: 3, secret: secret), 969_429)
-        XCTAssertEqual(OTP.computeHOTP(counter: 4, secret: secret), 338_314)
-        XCTAssertEqual(OTP.computeHOTP(counter: 5, secret: secret), 254_676)
-        XCTAssertEqual(OTP.computeHOTP(counter: 6, secret: secret), 287_922)
-        XCTAssertEqual(OTP.computeHOTP(counter: 7, secret: secret), 162_583)
-        XCTAssertEqual(OTP.computeHOTP(counter: 8, secret: secret), 399_871)
-        XCTAssertEqual(OTP.computeHOTP(counter: 9, secret: secret), 520_489)
+        XCTAssertEqual(HOTP(secret: secret).compute(counter: 0), 755_224)
+        XCTAssertEqual(HOTP(secret: secret).compute(counter: 1), 287_082)
+        XCTAssertEqual(HOTP(secret: secret).compute(counter: 2), 359_152)
+        XCTAssertEqual(HOTP(secret: secret).compute(counter: 3), 969_429)
+        XCTAssertEqual(HOTP(secret: secret).compute(counter: 4), 338_314)
+        XCTAssertEqual(HOTP(secret: secret).compute(counter: 5), 254_676)
+        XCTAssertEqual(HOTP(secret: secret).compute(counter: 6), 287_922)
+        XCTAssertEqual(HOTP(secret: secret).compute(counter: 7), 162_583)
+        XCTAssertEqual(HOTP(secret: secret).compute(counter: 8), 399_871)
+        XCTAssertEqual(HOTP(secret: secret).compute(counter: 9), 520_489)
     }
 
     func testTOTP() {
@@ -132,22 +132,17 @@ final class AuthTests: XCTestCase {
         dateFormatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss'Z'"
         dateFormatter.timeZone = TimeZone(secondsFromGMT: 0)
 
-        XCTAssertEqual(OTP.computeTOTP(date: dateFormatter.date(from: "1970-01-01T00:00:59Z")!, secret: secret, length: 8), 94_287_082)
-        XCTAssertEqual(OTP.computeTOTP(date: dateFormatter.date(from: "2005-03-18T01:58:29Z")!, secret: secret, length: 8), 7_081_804)
-        XCTAssertEqual(OTP.computeTOTP(date: dateFormatter.date(from: "2005-03-18T01:58:31Z")!, secret: secret, length: 8), 14_050_471)
-        XCTAssertEqual(OTP.computeTOTP(date: dateFormatter.date(from: "2009-02-13T23:31:30Z")!, secret: secret, length: 8), 89_005_924)
-        XCTAssertEqual(OTP.computeTOTP(date: dateFormatter.date(from: "2033-05-18T03:33:20Z")!, secret: secret, length: 8), 69_279_037)
-        XCTAssertEqual(OTP.computeTOTP(date: dateFormatter.date(from: "2603-10-11T11:33:20Z")!, secret: secret, length: 8), 65_353_130)
+        XCTAssertEqual(TOTP(secret: secret, length: 8).compute(date: dateFormatter.date(from: "1970-01-01T00:00:59Z")!), 94_287_082)
+        XCTAssertEqual(TOTP(secret: secret, length: 8).compute(date: dateFormatter.date(from: "2005-03-18T01:58:29Z")!), 7_081_804)
+        XCTAssertEqual(TOTP(secret: secret, length: 8).compute(date: dateFormatter.date(from: "2005-03-18T01:58:31Z")!), 14_050_471)
+        XCTAssertEqual(TOTP(secret: secret, length: 8).compute(date: dateFormatter.date(from: "2009-02-13T23:31:30Z")!), 89_005_924)
+        XCTAssertEqual(TOTP(secret: secret, length: 8).compute(date: dateFormatter.date(from: "2033-05-18T03:33:20Z")!), 69_279_037)
+        XCTAssertEqual(TOTP(secret: secret, length: 8).compute(date: dateFormatter.date(from: "2603-10-11T11:33:20Z")!), 65_353_130)
     }
 
     func testAuthenticatorURL() {
         let secret = "HB12345678901234567890"
-        let url = OTP.createAuthenticatorURL(for: secret, label: "TOTP test", issuer: "Hummingbird", algorithm: .totp)
-        XCTAssertEqual(url, "otpauth://totp/TOTP%20test?secret=JBBDCMRTGQ2TMNZYHEYDCMRTGQ2TMNZYHEYA&issuer=Hummingbird")
-    }
-
-    func testHOTP2() {
-        let secret = "HB12345678901234567890"
-        print((0...10).map { OTP.computeHOTP(counter: $0, secret: secret) })
+        let url = TOTP(secret: secret, length: 8).createAuthenticatorURL(label: "TOTP test", issuer: "Hummingbird")
+        XCTAssertEqual(url, "otpauth://totp/TOTP%20test?secret=JBBDCMRTGQ2TMNZYHEYDCMRTGQ2TMNZYHEYA&issuer=Hummingbird&digits=8")
     }
 }

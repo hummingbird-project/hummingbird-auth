@@ -1,6 +1,13 @@
 import Crypto
 import Foundation
 
+/// HashFunction used OTP generation
+public enum OTPHashFunction: String {
+    case sha1 = "SHA1"
+    case sha256 = "SHA256"
+    case sha512 = "SHA512"
+}
+
 /// One time password computation. A one time password is only valid for one login session. OTPs avoid a
 /// number of shortcomings that are associated with traditional (static) password-based authentication. OTP
 /// generation algorithms typically make use of pseudorandomness or randomness, making prediction of successor
@@ -9,67 +16,52 @@ import Foundation
 /// necessary because otherwise it would be easy to predict future OTPs by observing previous ones.
 ///
 /// OTPs are commonly used as the second part of two-factor authentication.
-public enum OTP {
-    public enum Algorithm: String {
-        case hotp
-        case totp
-    }
+protocol OTP {
+    /// Shared secret
+    var secret: String { get }
+    /// Length of OTP generated
+    var length: Int { get }
+    /// Hash function used to generate OTP
+    var hashFunction: OTPHashFunction { get }
+}
 
-    /// Compute a HOTP.
-    ///
-    /// A HOTP uses a counter as the message when computing the OTP. Everytime the user
-    /// successfully logs in the server and client should update the commonly stored counter so
-    /// the next login will require a new password.
-    /// - Parameters:
-    ///   - counter: counter to use
-    ///   - secret: Secret known by client and server
-    ///   - length: Length of password
-    /// - Returns: OTP password
-    public static func computeHOTP(counter: UInt64, secret: String, length: Int = 6) -> Int {
-        self.compute(message: counter.bigEndian.bytes, secret: secret, length: length)
-    }
-
-    /// Compute a TOTP
-    ///
-    /// A TOTP uses UNIX time ie the number of seconds since 1970 divided by a time step (normally
-    /// 30 seconds) as the counter in the OTP computation. This means each password is only ever
-    /// valid for the timeStep and a new password will be generated after that period.
+extension OTP {
+    /// Create Authenticator URL for OTP generator
     ///
     /// - Parameters:
-    ///   - date: Date to generate TOTP for
-    ///   - secret: Secret known by client and server
-    ///   - length: Length of password
-    ///   - timeStep: Time between each new code
-    /// - Returns: OTP password
-    public static func computeTOTP(date: Date = Date(), secret: String, length: Int = 6, timeStep: Int = 30) -> Int {
-        let timeInterval = date.timeIntervalSince1970
-        return self.computeHOTP(counter: UInt64(timeInterval / Double(timeStep)), secret: secret, length: length)
-    }
-
-    /// Create Authenticator URL for TOTP secret
-    ///
-    /// TOTP is used commonly with authenticator apps on the phone. The Authenticator apps require your
-    /// secret to be Base32 encoded when you supply it. You can either supply the base32 encoded secret
-    /// to be copied into the authenticator app or generate a QR Code to be scanned. This generates the
-    /// URL you should create your QR Code from.
-    ///
-    /// - Parameters:
-    ///   - secret: Shared secret
+    ///   - algorithmName: Name of algorithm
     ///   - label: Label for URL
     ///   - issuer: Who issued the URL
-    public static func createAuthenticatorURL(for secret: String, label: String, issuer: String? = nil, algorithm: Algorithm = .totp) -> String {
+    ///   - parameters: additional parameters
+    func createAuthenticatorURL(algorithmName: String, label: String, issuer: String?, parameters: [String: String]) -> String {
         let base32 = String(base32Encoding: secret.utf8)
         let label = label.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? label
         let issuer = issuer?.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? issuer
-        var url = "otpauth://\(algorithm)/\(label)?secret=\(base32)"
+        var url = "otpauth://\(algorithmName)/\(label)?secret=\(base32)"
         if let issuer = issuer {
             url += "&issuer=\(issuer)"
         }
+        url += parameters
+            .map { "&\($0.key)=\($0.value)" }
+            .joined()
         return url
     }
 
-    static func compute(message: [UInt8], secret: String, length: Int = 6) -> Int {
-        let sha1 = HMAC<Insecure.SHA1>.authenticationCode(for: message, using: SymmetricKey(data: [UInt8](secret.utf8)))
+    /// compute OTP. Converts hashFunction
+    func compute(message: [UInt8]) -> Int {
+        switch hashFunction {
+        case .sha1:
+            return self.compute(message: message, hashFunction: Insecure.SHA1())
+        case .sha256:
+            return self.compute(message: message, hashFunction: SHA256())
+        case .sha512:
+            return self.compute(message: message, hashFunction: SHA512())
+        }
+    }
+
+    /// compute OTP
+    func compute<H: Crypto.HashFunction>(message: [UInt8], hashFunction: H) -> Int {
+        let sha1 = HMAC<H>.authenticationCode(for: message, using: SymmetricKey(data: [UInt8](secret.utf8)))
         let truncation = sha1.withUnsafeBytes { bytes -> Int in
             let offset = Int(bytes[bytes.count - 1] & 0xF)
             var v = Int(bytes[offset] & 0x7F) << 24
@@ -82,6 +74,119 @@ public enum OTP {
             return repeatElement(value, count: power).reduce(1, *)
         }
         return truncation % pow(10, length)
+    }
+}
+
+/// A HOTP uses a counter as the message when computing the OTP. Everytime the user
+/// successfully logs in the server and client should update the commonly stored counter so
+/// the next login will require a new password.
+public struct HOTP: OTP {
+    public let secret: String
+    public let length: Int
+    public let hashFunction: OTPHashFunction
+
+    /// Initialize HOTP
+    ///
+    /// If you are using the Google Authenticator you should choose the default values for length and hashFunction
+    ///
+    /// - Parameters:
+    ///   - secret: Secret known by client and server
+    ///   - length: Length of password
+    ///   - hashFunction: Hash function to use
+    public init(secret: String, length: Int = 6, hashFunction: OTPHashFunction = .sha1) {
+        self.secret = secret
+        self.length = length
+        self.hashFunction = hashFunction
+    }
+
+    /// Compute a HOTP.
+    /// - Parameters:
+    ///   - counter: counter to use
+    /// - Returns: HOTP password
+    public func compute(counter: UInt64) -> Int {
+        self.compute(message: counter.bigEndian.bytes)
+    }
+
+    /// Create Authenticator URL for HOTP generator
+    ///
+    /// OTP is used commonly with authenticator apps on the phone. The Authenticator apps require your
+    /// secret to be Base32 encoded when you supply it. You can either supply the base32 encoded secret
+    /// to be copied into the authenticator app or generate a QR Code to be scanned. This generates the
+    /// URL you should create your QR Code from.
+    ///
+    /// - Parameters:
+    ///   - label: Label for URL
+    ///   - issuer: Who issued the URL
+    public func createAuthenticatorURL(label: String, issuer: String? = nil) -> String {
+        var parameters: [String: String] = [:]
+        if self.length != 6 {
+            parameters["digits"] = String(describing: self.length)
+        }
+        if self.hashFunction != .sha1 {
+            parameters["algorithm"] = self.hashFunction.rawValue
+        }
+        return self.createAuthenticatorURL(algorithmName: "totp", label: label, issuer: issuer, parameters: parameters)
+    }
+}
+
+/// A TOTP uses UNIX time ie the number of seconds since 1970 divided by a time step (normally
+/// 30 seconds) as the counter in the OTP computation. This means each password is only ever
+/// valid for the timeStep and a new password will be generated after that period.
+public struct TOTP: OTP {
+    public let secret: String
+    public let length: Int
+    public let hashFunction: OTPHashFunction
+    public let timeStep: Int
+
+    /// Initialize TOTP
+    ///
+    /// If you are using the Google Authenticator you should choose the default values for length, timeStep and hashFunction
+    ///
+    /// - Parameters:
+    ///   - secret: Secret known by client and server
+    ///   - length: Length of password
+    ///   - timeStep: Time between each new code
+    ///   - hashFunction: Hash function to use
+    public init(secret: String, length: Int = 6, timeStep: Int = 30, hashFunction: OTPHashFunction = .sha1) {
+        self.secret = secret
+        self.length = length
+        self.timeStep = timeStep
+        self.hashFunction = hashFunction
+    }
+
+    /// Compute a TOTP
+    ///
+    /// - Parameters:
+    ///   - date: Date to generate TOTP for
+    /// - Returns: TOTP password
+    public func compute(date: Date = Date()) -> Int {
+        let timeInterval = date.timeIntervalSince1970
+        let value = UInt64(timeInterval / Double(self.timeStep))
+        return self.compute(message: value.bigEndian.bytes)
+    }
+
+    /// Create Authenticator URL for TOTP generator
+    ///
+    /// OTP is used commonly with authenticator apps on the phone. The Authenticator apps require your
+    /// secret to be Base32 encoded when you supply it. You can either supply the base32 encoded secret
+    /// to be copied into the authenticator app or generate a QR Code to be scanned. This generates the
+    /// URL you should create your QR Code from.
+    ///
+    /// - Parameters:
+    ///   - label: Label for URL
+    ///   - issuer: Who issued the URL
+    public func createAuthenticatorURL(label: String, issuer: String? = nil) -> String {
+        var parameters: [String: String] = [:]
+        if self.length != 6 {
+            parameters["digits"] = String(describing: self.length)
+        }
+        if self.hashFunction != .sha1 {
+            parameters["algorithm"] = self.hashFunction.rawValue
+        }
+        if self.timeStep != 30 {
+            parameters["period"] = String(describing: self.timeStep)
+        }
+        return self.createAuthenticatorURL(algorithmName: "totp", label: label, issuer: issuer, parameters: parameters)
     }
 }
 
