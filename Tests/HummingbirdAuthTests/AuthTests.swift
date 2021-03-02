@@ -102,41 +102,52 @@ final class AuthTests: XCTestCase {
     }
 
     func testBase32() {
-        let data = randomBuffer(size: 6002)
+        let data = self.randomBuffer(size: 6002)
         let base32 = String(base32Encoding: data)
         let data2 = base32.base32decoded()
         XCTAssertEqual(data, data2)
     }
-    
+
     func testHOTP() {
         // test against RFC4226 example values https://tools.ietf.org/html/rfc4226#page-32
         let secret = "12345678901234567890"
-        XCTAssertEqual(OTP.hotp(counter: 0, secret: secret), 755224)
-        XCTAssertEqual(OTP.hotp(counter: 1, secret: secret), 287082)
-        XCTAssertEqual(OTP.hotp(counter: 2, secret: secret), 359152)
-        XCTAssertEqual(OTP.hotp(counter: 3, secret: secret), 969429)
-        XCTAssertEqual(OTP.hotp(counter: 4, secret: secret), 338314)
-        XCTAssertEqual(OTP.hotp(counter: 5, secret: secret), 254676)
-        XCTAssertEqual(OTP.hotp(counter: 6, secret: secret), 287922)
-        XCTAssertEqual(OTP.hotp(counter: 7, secret: secret), 162583)
-        XCTAssertEqual(OTP.hotp(counter: 8, secret: secret), 399871)
-        XCTAssertEqual(OTP.hotp(counter: 9, secret: secret), 520489)
+        XCTAssertEqual(OTP.computeHOTP(counter: 0, secret: secret), 755_224)
+        XCTAssertEqual(OTP.computeHOTP(counter: 1, secret: secret), 287_082)
+        XCTAssertEqual(OTP.computeHOTP(counter: 2, secret: secret), 359_152)
+        XCTAssertEqual(OTP.computeHOTP(counter: 3, secret: secret), 969_429)
+        XCTAssertEqual(OTP.computeHOTP(counter: 4, secret: secret), 338_314)
+        XCTAssertEqual(OTP.computeHOTP(counter: 5, secret: secret), 254_676)
+        XCTAssertEqual(OTP.computeHOTP(counter: 6, secret: secret), 287_922)
+        XCTAssertEqual(OTP.computeHOTP(counter: 7, secret: secret), 162_583)
+        XCTAssertEqual(OTP.computeHOTP(counter: 8, secret: secret), 399_871)
+        XCTAssertEqual(OTP.computeHOTP(counter: 9, secret: secret), 520_489)
     }
 
     func testTOTP() {
         // test against RFC6238 example values https://tools.ietf.org/html/rfc6238#page-15
         let secret = "12345678901234567890"
-        
+
         let dateFormatter = DateFormatter()
         dateFormatter.locale = Locale(identifier: "en_US_POSIX")
         dateFormatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss'Z'"
         dateFormatter.timeZone = TimeZone(secondsFromGMT: 0)
 
-        XCTAssertEqual(OTP.totp(date: dateFormatter.date(from: "1970-01-01T00:00:59Z")!, secret: secret, length: 8), 94287082)
-        XCTAssertEqual(OTP.totp(date: dateFormatter.date(from: "2005-03-18T01:58:29Z")!, secret: secret, length: 8), 7081804)
-        XCTAssertEqual(OTP.totp(date: dateFormatter.date(from: "2005-03-18T01:58:31Z")!, secret: secret, length: 8), 14050471)
-        XCTAssertEqual(OTP.totp(date: dateFormatter.date(from: "2009-02-13T23:31:30Z")!, secret: secret, length: 8), 89005924)
-        XCTAssertEqual(OTP.totp(date: dateFormatter.date(from: "2033-05-18T03:33:20Z")!, secret: secret, length: 8), 69279037)
-        XCTAssertEqual(OTP.totp(date: dateFormatter.date(from: "2603-10-11T11:33:20Z")!, secret: secret, length: 8), 65353130)
+        XCTAssertEqual(OTP.computeTOTP(date: dateFormatter.date(from: "1970-01-01T00:00:59Z")!, secret: secret, length: 8), 94_287_082)
+        XCTAssertEqual(OTP.computeTOTP(date: dateFormatter.date(from: "2005-03-18T01:58:29Z")!, secret: secret, length: 8), 7_081_804)
+        XCTAssertEqual(OTP.computeTOTP(date: dateFormatter.date(from: "2005-03-18T01:58:31Z")!, secret: secret, length: 8), 14_050_471)
+        XCTAssertEqual(OTP.computeTOTP(date: dateFormatter.date(from: "2009-02-13T23:31:30Z")!, secret: secret, length: 8), 89_005_924)
+        XCTAssertEqual(OTP.computeTOTP(date: dateFormatter.date(from: "2033-05-18T03:33:20Z")!, secret: secret, length: 8), 69_279_037)
+        XCTAssertEqual(OTP.computeTOTP(date: dateFormatter.date(from: "2603-10-11T11:33:20Z")!, secret: secret, length: 8), 65_353_130)
+    }
+
+    func testAuthenticatorURL() {
+        let secret = "HB12345678901234567890"
+        let url = OTP.createAuthenticatorURL(for: secret, label: "TOTP test", issuer: "Hummingbird", algorithm: .totp)
+        XCTAssertEqual(url, "otpauth://totp/TOTP%20test?secret=JBBDCMRTGQ2TMNZYHEYDCMRTGQ2TMNZYHEYA&issuer=Hummingbird")
+    }
+
+    func testHOTP2() {
+        let secret = "HB12345678901234567890"
+        print((0...10).map { OTP.computeHOTP(counter: $0, secret: secret) })
     }
 }

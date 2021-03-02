@@ -10,20 +10,9 @@ import Foundation
 ///
 /// OTPs are commonly used as the second part of two-factor authentication.
 public enum OTP {
-    static func compute(message: [UInt8], secret: String, length: Int = 6) -> Int {
-        let sha1 = HMAC<Insecure.SHA1>.authenticationCode(for: message, using: SymmetricKey(data: [UInt8](secret.utf8)))
-        let truncation = sha1.withUnsafeBytes { bytes -> Int in
-            let offset = Int(bytes[bytes.count-1] & 0xf)
-            var v: Int = Int(bytes[offset] & 0x7f) << 24
-            v += Int(bytes[offset+1]) << 16
-            v += Int(bytes[offset+2]) << 8
-            v += Int(bytes[offset+3])
-            return v
-        }
-        func pow(_ value: Int, _ power: Int) -> Int {
-            return repeatElement(value, count: power).reduce(1, *)
-        }
-        return truncation % pow(10, length)
+    public enum Algorithm: String {
+        case hotp
+        case totp
     }
 
     /// Compute a HOTP.
@@ -36,8 +25,8 @@ public enum OTP {
     ///   - secret: Secret known by client and server
     ///   - length: Length of password
     /// - Returns: OTP password
-    public static func hotp(counter: UInt64, secret: String, length: Int = 6) -> Int {
-        compute(message: counter.bigEndian.bytes, secret: secret, length: length)
+    public static func computeHOTP(counter: UInt64, secret: String, length: Int = 6) -> Int {
+        self.compute(message: counter.bigEndian.bytes, secret: secret, length: length)
     }
 
     /// Compute a TOTP
@@ -46,24 +35,53 @@ public enum OTP {
     /// 30 seconds) as the counter in the OTP computation. This means each password is only ever
     /// valid for the timeStep and a new password will be generated after that period.
     ///
-    /// TOTP is used commonly with authenticator apps on the phone. Google Authenticator requires your
-    /// secret to be Base32 encoded when you supply it. You can either supply the base32 encoded secret
-    /// to be copied into the authenticator app or generate a QR Code to be scanned. The address the QR
-    /// Code must encode is as follows
-    /// ```
-    /// otpauth://totp/<label>?secret=<Base32 encoded secret>&issuer=<issuer>
-    /// ```
-    /// You need to provide a label, Base32 encoded secret and an issuer.
-    ///
     /// - Parameters:
     ///   - date: Date to generate TOTP for
     ///   - secret: Secret known by client and server
     ///   - length: Length of password
     ///   - timeStep: Time between each new code
     /// - Returns: OTP password
-    public static func totp(date: Date = Date(), secret: String, length: Int = 6, timeStep: Int = 30) -> Int {
+    public static func computeTOTP(date: Date = Date(), secret: String, length: Int = 6, timeStep: Int = 30) -> Int {
         let timeInterval = date.timeIntervalSince1970
-        return hotp(counter: UInt64(timeInterval/Double(timeStep)), secret: secret, length: length)
+        return self.computeHOTP(counter: UInt64(timeInterval / Double(timeStep)), secret: secret, length: length)
+    }
+
+    /// Create Authenticator URL for TOTP secret
+    ///
+    /// TOTP is used commonly with authenticator apps on the phone. The Authenticator apps require your
+    /// secret to be Base32 encoded when you supply it. You can either supply the base32 encoded secret
+    /// to be copied into the authenticator app or generate a QR Code to be scanned. This generates the
+    /// URL you should create your QR Code from.
+    ///
+    /// - Parameters:
+    ///   - secret: Shared secret
+    ///   - label: Label for URL
+    ///   - issuer: Who issued the URL
+    public static func createAuthenticatorURL(for secret: String, label: String, issuer: String? = nil, algorithm: Algorithm = .totp) -> String {
+        let base32 = String(base32Encoding: secret.utf8)
+        let label = label.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? label
+        let issuer = issuer?.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? issuer
+        var url = "otpauth://\(algorithm)/\(label)?secret=\(base32)"
+        if let issuer = issuer {
+            url += "&issuer=\(issuer)"
+        }
+        return url
+    }
+
+    static func compute(message: [UInt8], secret: String, length: Int = 6) -> Int {
+        let sha1 = HMAC<Insecure.SHA1>.authenticationCode(for: message, using: SymmetricKey(data: [UInt8](secret.utf8)))
+        let truncation = sha1.withUnsafeBytes { bytes -> Int in
+            let offset = Int(bytes[bytes.count - 1] & 0xF)
+            var v = Int(bytes[offset] & 0x7F) << 24
+            v += Int(bytes[offset + 1]) << 16
+            v += Int(bytes[offset + 2]) << 8
+            v += Int(bytes[offset + 3])
+            return v
+        }
+        func pow(_ value: Int, _ power: Int) -> Int {
+            return repeatElement(value, count: power).reduce(1, *)
+        }
+        return truncation % pow(10, length)
     }
 }
 

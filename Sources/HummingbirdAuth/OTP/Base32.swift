@@ -70,13 +70,11 @@ enum Base32 {
 }
 
 extension String {
-    public init<Buffer: Collection>(base32Encoding bytes: Buffer) where Buffer.Element == UInt8
-    {
+    public init<Buffer: Collection>(base32Encoding bytes: Buffer) where Buffer.Element == UInt8 {
         self = Base32.encodeString(bytes: bytes)
     }
 
     public func base32decoded() -> [UInt8]? {
         Base32.decode(string: self)
     }
-
 }
