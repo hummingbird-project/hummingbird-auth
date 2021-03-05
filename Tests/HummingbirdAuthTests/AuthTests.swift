@@ -102,9 +102,15 @@ final class AuthTests: XCTestCase {
     }
 
     func testBase32() {
-        let data = self.randomBuffer(size: 6002)
+        let data = [UInt8]("ABCDEFGHITJKLMNOPQRSTUVWXYZabcedefé".utf8)
         let base32 = String(base32Encoding: data)
-        let data2 = base32.base32decoded()
+        XCTAssertEqual(base32, "IFBEGRCFIZDUQSKUJJFUYTKOJ5IFCUSTKRKVMV2YLFNGCYTDMVSGKZWDVE")
+    }
+
+    func testBase32EncodeDecode() {
+        let data = randomBuffer(size: Int.random(in: 4000...8000))
+        let base32 = String(base32Encoding: data)
+        let data2 = try! base32.base32decoded()
         XCTAssertEqual(data, data2)
     }
 
