@@ -10,6 +10,10 @@ extension String {
 }
 
 enum Base32 {
+    public enum DecodingError: Swift.Error {
+        case invalidCharacter
+    }
+
     public static func encodeBytes<Buffer: Collection>(bytes: Buffer) -> [UInt8] where Buffer.Element == UInt8 {
         let capacity = (bytes.count * 8 + 4) / 5
 
@@ -68,10 +72,6 @@ enum Base32 {
         encoded.makeContiguousUTF8()
         return try Self.decode(string: encoded)
     }
-
-    public enum DecodingError: Swift.Error {
-        case invalidCharacter
-    }
 }
 
 extension Base32 {
@@ -110,15 +110,25 @@ extension Base32 {
         /* F0 */ 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80,
         /* F8 */ 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80,
     ]
+
+    private static let encodeTable: [UInt8] = [
+        /* 00 */ 0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47, 0x48,
+        /* 08 */ 0x49, 0x4A, 0x4B, 0x4C, 0x4D, 0x4E, 0x4F, 0x50,
+        /* 10 */ 0x51, 0x52, 0x53, 0x54, 0x55, 0x56, 0x57, 0x58,
+        /* 18 */ 0x59, 0x5A, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37,
+    ]
+
     private static func _decode(from input: UnsafeBufferPointer<UInt8>, into output: UnsafeMutableBufferPointer<UInt8>) throws -> Int {
-        return try decodeTable.withUnsafeBufferPointer { decodeTable in
+        return try self.decodeTable.withUnsafeBufferPointer { decodeTable in
             var bitsLeft: Int = 0
             var buffer: UInt32 = 0
             var outputIndex = 0
             for i in 0..<input.count {
                 let index = Int(input[i])
                 let v = decodeTable[index]
+                // check for unexpected character
                 guard v != 0x80 else { throw DecodingError.invalidCharacter }
+                // check for ignorable character
                 guard v != 0x40 else { continue }
 
                 buffer <<= 5
@@ -126,7 +136,7 @@ extension Base32 {
                 bitsLeft += 5
                 if bitsLeft >= 8 {
                     let result = (buffer >> (bitsLeft - 8))
-                    output[outputIndex] = UInt8(result & 0xff)
+                    output[outputIndex] = UInt8(result & 0xFF)
                     outputIndex += 1
                     bitsLeft -= 8
                 }
@@ -134,15 +144,9 @@ extension Base32 {
             return outputIndex
         }
     }
-    
-    private static let encodeTable: [UInt8] = [
-        /* 00 */ 0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47, 0x48,
-        /* 08 */ 0x49, 0x4A, 0x4B, 0x4C, 0x4D, 0x4E, 0x4F, 0x50,
-        /* 10 */ 0x51, 0x52, 0x53, 0x54, 0x55, 0x56, 0x57, 0x58,
-        /* 18 */ 0x59, 0x5A, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37,
-    ]
+
     private static func _encode(from input: UnsafeBufferPointer<UInt8>, into output: UnsafeMutableBufferPointer<UInt8>) -> Int {
-        return encodeTable.withUnsafeBufferPointer { encodeTable in
+        return self.encodeTable.withUnsafeBufferPointer { encodeTable in
             var outputIndex = 0
             var i = 1
             var bitsLeft = 8
@@ -155,12 +159,12 @@ extension Base32 {
                     bitsLeft += 8
                 }
                 let unmaskedIndex = (buffer >> (bitsLeft - 5))
-                let index = 0x1f & unmaskedIndex
+                let index = 0x1F & unmaskedIndex
                 bitsLeft -= 5
                 output[outputIndex] = encodeTable[index]
                 outputIndex += 1
             }
-            
+
             while bitsLeft > 0 {
                 if bitsLeft < 5 {
                     let pad = 5 - bitsLeft
@@ -168,7 +172,7 @@ extension Base32 {
                     bitsLeft += pad
                 }
                 let unmaskedIndex = (buffer >> (bitsLeft - 5))
-                let index = 0x1f & unmaskedIndex
+                let index = 0x1F & unmaskedIndex
                 bitsLeft -= 5
                 output[outputIndex] = encodeTable[index]
                 outputIndex += 1
