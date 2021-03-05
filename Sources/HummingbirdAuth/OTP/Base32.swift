@@ -1,4 +1,3 @@
-@_implementationOnly import CBase32
 
 extension String {
     public init<Buffer: Collection>(base32Encoding bytes: Buffer) where Buffer.Element == UInt8 {

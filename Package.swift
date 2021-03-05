@@ -16,13 +16,11 @@ let package = Package(
     ],
     targets: [
         .target(name: "HummingbirdAuth", dependencies: [
-            .byName(name: "CBase32"),
             .byName(name: "CBcrypt"),
             .product(name: "Crypto", package: "swift-crypto"),
             .product(name: "ExtrasBase64", package: "swift-extras-base64"),
             .product(name: "Hummingbird", package: "hummingbird"),
         ]),
-        .target(name: "CBase32", dependencies: []),
         .target(name: "CBcrypt", dependencies: []),
         .testTarget(name: "HummingbirdAuthTests", dependencies: [
             .byName(name: "HummingbirdAuth"),
