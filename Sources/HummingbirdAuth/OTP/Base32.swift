@@ -93,20 +93,20 @@ public enum Base32 {
     /// - Throws: Base32.DecodingError
     /// - Returns: Returns decoded buffer
     public static func decode<Buffer: Collection>(_ encoded: Buffer) throws -> [UInt8] where Buffer.Element == UInt8 {
-         let decoded = try encoded.withContiguousStorageIfAvailable { (input) -> [UInt8] in
-             let outputLength = ((input.count + 3) / 4) * 3
+        let decoded = try encoded.withContiguousStorageIfAvailable { (input) -> [UInt8] in
+            let outputLength = ((input.count + 3) / 4) * 3
 
-             return try [UInt8](unsafeUninitializedCapacity: outputLength) { output, length in
-                 length = try Self._decode(from: input, into: output)
-             }
-         }
+            return try [UInt8](unsafeUninitializedCapacity: outputLength) { output, length in
+                length = try Self._decode(from: input, into: output)
+            }
+        }
 
-         if decoded != nil {
-             return decoded!
-         }
+        if decoded != nil {
+            return decoded!
+        }
 
-         return try self.decode(Array(encoded))
-     }
+        return try self.decode(Array(encoded))
+    }
 }
 
 extension Base32 {
