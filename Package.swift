@@ -10,9 +10,9 @@ let package = Package(
         .library(name: "HummingbirdAuth", targets: ["HummingbirdAuth"]),
     ],
     dependencies: [
-        .package(url: "https://github.com/hummingbird-project/hummingbird.git", from: "0.5.0"),
+        .package(url: "https://github.com/hummingbird-project/hummingbird.git", from: "0.7.0"),
         .package(url: "https://github.com/apple/swift-crypto.git", from: "1.0.0"),
-        .package(url: "https://github.com/swift-extras/swift-extras-base64.git", from: "0.5.0"),
+        .package(url: "https://github.com/swift-extras/swift-extras-base64.git", .upToNextMinor(from: "0.7.0")),
     ],
     targets: [
         .target(name: "HummingbirdAuth", dependencies: [

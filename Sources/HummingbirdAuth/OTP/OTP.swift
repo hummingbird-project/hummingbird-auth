@@ -1,4 +1,5 @@
 import Crypto
+import ExtrasBase64
 import Foundation
 
 /// HashFunction used OTP generation
