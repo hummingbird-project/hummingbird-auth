@@ -26,6 +26,15 @@ extension HBRequest {
             return self.loginCache?[ObjectIdentifier(Auth.self)] as? Auth
         }
 
+        /// Return authenticated type
+        /// - Parameter auth: Type required
+        public func require<Auth: HBAuthenticatable>(_: Auth.Type) throws -> Auth {
+            guard let auth = self.loginCache?[ObjectIdentifier(Auth.self)] as? Auth else {
+                throw HBHTTPError(.unauthorized)
+            }
+            return auth
+        }
+
         /// Return if request is authenticated with type
         /// - Parameter auth: Authentication type
         public func has<Auth: HBAuthenticatable>(_: Auth.Type) -> Bool {
