@@ -34,12 +34,12 @@ final class AuthTests: XCTestCase {
         XCTAssertFalse(Bcrypt.verify("password1", hash: hash))
     }
 
-    func testBearer() {
+    func testBearer() throws {
         let app = HBApplication(testing: .embedded)
         app.router.get { request -> String? in
             return request.auth.bearer?.token
         }
-        app.XCTStart()
+        try app.XCTStart()
         defer { app.XCTStop() }
 
         app.XCTExecute(uri: "/", method: .GET, headers: ["Authorization": "Bearer 1234567890"]) { response in
@@ -51,12 +51,12 @@ final class AuthTests: XCTestCase {
         }
     }
 
-    func testBasic() {
+    func testBasic() throws {
         let app = HBApplication(testing: .embedded)
         app.router.get { request -> String? in
             return request.auth.basic.map { "\($0.username):\($0.password)" }
         }
-        app.XCTStart()
+        try app.XCTStart()
         defer { app.XCTStop() }
 
         let basic = "adam:password"
@@ -67,7 +67,7 @@ final class AuthTests: XCTestCase {
         }
     }
 
-    func testAuth() {
+    func testAuth() throws {
         struct User: HBAuthenticatable {
             let name: String
         }
@@ -82,7 +82,7 @@ final class AuthTests: XCTestCase {
             return .accepted
         }
 
-        app.XCTStart()
+        try app.XCTStart()
         defer { app.XCTStop() }
 
         app.XCTExecute(uri: "/", method: .GET) { response in
@@ -90,7 +90,7 @@ final class AuthTests: XCTestCase {
         }
     }
 
-    func testLogin() {
+    func testLogin() throws {
         struct User: HBAuthenticatable {
             let name: String
         }
@@ -107,7 +107,7 @@ final class AuthTests: XCTestCase {
             return .ok
         }
 
-        app.XCTStart()
+        try app.XCTStart()
         defer { app.XCTStop() }
 
         app.XCTExecute(uri: "/", method: .GET) { response in
