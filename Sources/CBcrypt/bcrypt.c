@@ -58,8 +58,8 @@ static int decode_base64(u_int8_t *, size_t, const char *);
 /*
  * Generates a salt for this version of crypt.
  */
-static int
-bcrypt_initsalt_with_csalt(int log_rounds, char *salt, size_t saltbuflen, const uint8_t *csalt)
+int
+c_hb_bcrypt_initsalt_with_csalt(int log_rounds, char *salt, size_t saltbuflen, const uint8_t *csalt)
 {
     if (saltbuflen < BCRYPT_SALTSPACE) {
         errno = EINVAL;
@@ -309,28 +309,3 @@ encode_base64(char *b64buffer, const u_int8_t *data, size_t len)
     *bp = '\0';
     return 0;
 }
-
-/*
- * classic interface
- */
-char *
-c_hb_bcrypt_gensalt_with_csalt(u_int8_t log_rounds, const u_int8_t *csalt)
-{
-    static char    gsalt[BCRYPT_SALTSPACE];
-
-    bcrypt_initsalt_with_csalt(log_rounds, gsalt, sizeof(gsalt), csalt);
-
-    return gsalt;
-}
-
-char *
-c_hb_bcrypt(const char *pass, const char *salt)
-{
-    static char    gencrypted[BCRYPT_HASHSPACE];
-
-    if (c_hb_bcrypt_hashpass(pass, salt, gencrypted, sizeof(gencrypted)) != 0)
-        return NULL;
-
-    return gencrypted;
-}
-DEF_WEAK(bcrypt);
