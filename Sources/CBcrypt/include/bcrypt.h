@@ -40,12 +40,12 @@
 #define BCRYPT_WORDS 6        /* Ciphertext words */
 #define BCRYPT_MINLOGROUNDS 4    /* we have log2(rounds) in salt */
 
-#define    BCRYPT_SALTSPACE    (7 + (BCRYPT_MAXSALT * 4 + 2) / 3 + 1)
+#define    BCRYPT_SALTSPACE    30 /* (7 + (BCRYPT_MAXSALT * 4 + 2) / 3 + 1) */
 #define    BCRYPT_HASHSPACE    61
 
 /// generate salt given a cost and random buffer of 16 bytes
-char *c_hb_bcrypt_gensalt_with_csalt(u_int8_t cost, const uint8_t *csalt);
+int c_hb_bcrypt_initsalt_with_csalt(int log_rounds, char *salt, size_t saltbuflen, const uint8_t *csalt);
 /// encrypt `pass` using `salt`
-char *c_hb_bcrypt(const char *pass, const char *salt);
+int c_hb_bcrypt_hashpass(const char *key, const char *salt, char *encrypted, size_t encryptedlen);
 /// check `pass` against hash
 int c_hb_bcrypt_checkpass(const char *pass, const char *goodhash);
