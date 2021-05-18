@@ -12,6 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+import AsyncHTTPClient
 import Hummingbird
 import HummingbirdAuth
 import HummingbirdXCT
@@ -32,6 +33,32 @@ final class AuthTests: XCTestCase {
     func testBcryptFalse() {
         let hash = Bcrypt.hash("password")
         XCTAssertFalse(Bcrypt.verify("password1", hash: hash))
+    }
+
+    func testMultipleBcrypt() throws {
+        let app = HBApplication()
+        app.router.post { request -> HTTPResponseStatus in
+            let text = request.body.buffer.map { String(buffer: $0) } ?? "text"
+            let hash = Bcrypt.hash(text)
+            if Bcrypt.verify(text, hash: hash) {
+                return .ok
+            } else {
+                return .internalServerError
+            }
+        }
+
+        try app.start()
+        defer { app.stop() }
+
+        let client = HTTPClient(eventLoopGroupProvider: .shared(app.eventLoopGroup))
+        defer { try? client.syncShutdown() }
+
+        let futures: [EventLoopFuture<HTTPClient.Response>] = (0..<4).map {
+            return client.post(url: "http://localhost:8080/", body: .string("This is a test \($0)"))
+        }
+        try EventLoopFuture.whenAllSucceed(futures, on: app.eventLoopGroup.next()).map { results in
+            results.forEach { XCTAssertEqual($0.status, .ok) }
+        }.wait()
     }
 
     func testBearer() throws {
