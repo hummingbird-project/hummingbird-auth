@@ -31,12 +31,12 @@ public enum Bcrypt {
 
         // create random salt here, instead of using C as arc4random_buf is not always available
         let csalt: [UInt8] = (0..<BCRYPT_MAXSALT).map { _ in UInt8.random(in: .min ... .max) }
-        let salt = [CChar](unsafeUninitializedCapacity: Int(BCRYPT_SALTSPACE)) { bytes, size in
+        let salt = [CChar](unsafeUninitializedCapacity: Int(BCRYPT_SALTSPACE)) { bytes, _ in
             _ = c_hb_bcrypt_initsalt_with_csalt(Int32(cost), bytes.baseAddress, Int(BCRYPT_SALTSPACE), csalt)
         }
 
         // create hashed data
-        let hashedData = [CChar](unsafeUninitializedCapacity: Int(BCRYPT_HASHSPACE)) { bytes, size in
+        let hashedData = [CChar](unsafeUninitializedCapacity: Int(BCRYPT_HASHSPACE)) { bytes, _ in
             _ = c_hb_bcrypt_hashpass(text, salt, bytes.baseAddress, Int(BCRYPT_HASHSPACE))
         }
 
