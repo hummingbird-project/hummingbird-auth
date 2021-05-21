@@ -22,17 +22,19 @@ public struct HBXCTAuthentication: Equatable {
     public static func basic(username: String, password: String) -> Self {
         return .init(value: .basic(username: username, password: password))
     }
+
     /// create bearer authentication test
     public static func bearer(_ token: String) -> Self {
         return .init(value: .bearer(token))
     }
+
     /// create cookie authentication test
     public static func cookie(name: String, value: String) -> Self {
         return .init(value: .cookie(name: name, value: value))
     }
 
     func apply(uri: String, method: HTTPMethod, headers: HTTPHeaders, body: ByteBuffer?) -> (uri: String, method: HTTPMethod, headers: HTTPHeaders, body: ByteBuffer?) {
-        switch value {
+        switch self.value {
         case .basic(let username, let password):
             var headers = headers
             let usernamePassword = "\(username):\(password)"
@@ -55,7 +57,6 @@ public struct HBXCTAuthentication: Equatable {
             }
             headers.replaceOrAdd(name: "cookie", value: newCookie)
             return (uri: uri, method: method, headers: headers, body: body)
-
         }
     }
 
@@ -67,7 +68,6 @@ public struct HBXCTAuthentication: Equatable {
     }
 
     private let value: Internal
-
 }
 
 extension HBApplication {
@@ -90,5 +90,4 @@ extension HBApplication {
             try testCallback(response)
         }.wait())
     }
-
 }
