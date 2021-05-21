@@ -17,6 +17,7 @@ import Hummingbird
 import HummingbirdXCT
 import XCTest
 
+/// Used to generate various authentication types for XCT tests
 public struct HBXCTAuthentication: Equatable {
     /// create basic authentication test
     public static func basic(username: String, password: String) -> Self {
@@ -71,7 +72,7 @@ public struct HBXCTAuthentication: Equatable {
 }
 
 extension HBApplication {
-    /// Send request and call test callback on the response returned
+    /// Send request with authentication and call test callback on the response returned
     public func XCTExecute(
         uri: String,
         method: HTTPMethod,
