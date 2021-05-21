@@ -12,9 +12,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-import AsyncHTTPClient
 import Hummingbird
 import HummingbirdAuth
+import HummingbirdAuthXCT
 import HummingbirdXCT
 import XCTest
 
@@ -36,29 +36,20 @@ final class AuthTests: XCTestCase {
     }
 
     func testMultipleBcrypt() throws {
-        let app = HBApplication()
-        app.router.post { request -> HTTPResponseStatus in
-            let text = request.body.buffer.map { String(buffer: $0) } ?? "text"
-            let hash = Bcrypt.hash(text)
-            if Bcrypt.verify(text, hash: hash) {
-                return .ok
-            } else {
-                return .internalServerError
+        struct VerifyFailError: Error {}
+        let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 8)
+        let futures: [EventLoopFuture<Void>] = (0..<8).map { number in
+            eventLoopGroup.next().submit {
+                let text = "This is a test \(number)"
+                let hash = Bcrypt.hash(text)
+                if Bcrypt.verify(text, hash: hash) {
+                    return
+                } else {
+                    throw VerifyFailError()
+                }
             }
         }
-
-        try app.start()
-        defer { app.stop() }
-
-        let client = HTTPClient(eventLoopGroupProvider: .shared(app.eventLoopGroup))
-        defer { try? client.syncShutdown() }
-
-        let futures: [EventLoopFuture<HTTPClient.Response>] = (0..<4).map {
-            return client.post(url: "http://localhost:8080/", body: .string("This is a test \($0)"))
-        }
-        try EventLoopFuture.whenAllSucceed(futures, on: app.eventLoopGroup.next()).map { results in
-            results.forEach { XCTAssertEqual($0.status, .ok) }
-        }.wait()
+        _ = try EventLoopFuture.whenAllSucceed(futures, on: eventLoopGroup.next()).wait()
     }
 
     func testBearer() throws {
@@ -69,11 +60,11 @@ final class AuthTests: XCTestCase {
         try app.XCTStart()
         defer { app.XCTStop() }
 
-        app.XCTExecute(uri: "/", method: .GET, headers: ["Authorization": "Bearer 1234567890"]) { response in
+        app.XCTExecute(uri: "/", method: .GET, auth: .bearer("1234567890")) { response in
             let body = try XCTUnwrap(response.body)
             XCTAssertEqual(String(buffer: body), "1234567890")
         }
-        app.XCTExecute(uri: "/", method: .GET, headers: ["Authorization": "Basic 1234567890"]) { response in
+        app.XCTExecute(uri: "/", method: .GET, auth: .basic(username: "adam", password: "1234")) { response in
             XCTAssertEqual(response.status, .notFound)
         }
     }
@@ -86,11 +77,9 @@ final class AuthTests: XCTestCase {
         try app.XCTStart()
         defer { app.XCTStop() }
 
-        let basic = "adam:password"
-        let base64 = String(base64Encoding: basic.utf8)
-        app.XCTExecute(uri: "/", method: .GET, headers: ["Authorization": "Basic \(base64)"]) { response in
+        app.XCTExecute(uri: "/", method: .GET, auth: .basic(username: "adam", password: "password")) { response in
             let body = try XCTUnwrap(response.body)
-            XCTAssertEqual(String(buffer: body), basic)
+            XCTAssertEqual(String(buffer: body), "adam:password")
         }
     }
 
@@ -153,43 +142,5 @@ final class AuthTests: XCTestCase {
         let base32 = String(base32Encoding: data)
         let data2 = try! base32.base32decoded()
         XCTAssertEqual(data, data2)
-    }
-
-    func testHOTP() {
-        // test against RFC4226 example values https://tools.ietf.org/html/rfc4226#page-32
-        let secret = "12345678901234567890"
-        XCTAssertEqual(HOTP(secret: secret).compute(counter: 0), 755_224)
-        XCTAssertEqual(HOTP(secret: secret).compute(counter: 1), 287_082)
-        XCTAssertEqual(HOTP(secret: secret).compute(counter: 2), 359_152)
-        XCTAssertEqual(HOTP(secret: secret).compute(counter: 3), 969_429)
-        XCTAssertEqual(HOTP(secret: secret).compute(counter: 4), 338_314)
-        XCTAssertEqual(HOTP(secret: secret).compute(counter: 5), 254_676)
-        XCTAssertEqual(HOTP(secret: secret).compute(counter: 6), 287_922)
-        XCTAssertEqual(HOTP(secret: secret).compute(counter: 7), 162_583)
-        XCTAssertEqual(HOTP(secret: secret).compute(counter: 8), 399_871)
-        XCTAssertEqual(HOTP(secret: secret).compute(counter: 9), 520_489)
-    }
-
-    func testTOTP() {
-        // test against RFC6238 example values https://tools.ietf.org/html/rfc6238#page-15
-        let secret = "12345678901234567890"
-
-        let dateFormatter = DateFormatter()
-        dateFormatter.locale = Locale(identifier: "en_US_POSIX")
-        dateFormatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss'Z'"
-        dateFormatter.timeZone = TimeZone(secondsFromGMT: 0)
-
-        XCTAssertEqual(TOTP(secret: secret, length: 8).compute(date: dateFormatter.date(from: "1970-01-01T00:00:59Z")!), 94_287_082)
-        XCTAssertEqual(TOTP(secret: secret, length: 8).compute(date: dateFormatter.date(from: "2005-03-18T01:58:29Z")!), 7_081_804)
-        XCTAssertEqual(TOTP(secret: secret, length: 8).compute(date: dateFormatter.date(from: "2005-03-18T01:58:31Z")!), 14_050_471)
-        XCTAssertEqual(TOTP(secret: secret, length: 8).compute(date: dateFormatter.date(from: "2009-02-13T23:31:30Z")!), 89_005_924)
-        XCTAssertEqual(TOTP(secret: secret, length: 8).compute(date: dateFormatter.date(from: "2033-05-18T03:33:20Z")!), 69_279_037)
-        XCTAssertEqual(TOTP(secret: secret, length: 8).compute(date: dateFormatter.date(from: "2603-10-11T11:33:20Z")!), 65_353_130)
-    }
-
-    func testAuthenticatorURL() {
-        let secret = "HB12345678901234567890"
-        let url = TOTP(secret: secret, length: 8).createAuthenticatorURL(label: "TOTP test", issuer: "Hummingbird")
-        XCTAssertEqual(url, "otpauth://totp/TOTP%20test?secret=JBBDCMRTGQ2TMNZYHEYDCMRTGQ2TMNZYHEYA&issuer=Hummingbird&digits=8")
     }
 }
