@@ -145,4 +145,32 @@ final class AuthTests: XCTestCase {
         let data2 = try! base32.base32decoded()
         XCTAssertEqual(data, data2)
     }
+
+    #if compiler(>=5.5)
+    @available(macOS 12.0, iOS 15.0, watchOS 8.0, tvOS 15.0, *)
+    func testAsyncAuthenticator() throws {
+        struct User: HBAuthenticatable {
+            let name: String
+        }
+        struct HBTestAuthenticator: HBAsyncAuthenticator {
+            func authenticate(request: HBRequest) async throws -> User? {
+                return .init(name: "Adam")
+            }
+        }
+
+        let app = HBApplication(testing: .live)
+        app.middleware.add(HBTestAuthenticator())
+        app.router.get { request -> HTTPResponseStatus in
+            guard request.auth.has(User.self) else { return .unauthorized }
+            return .ok
+        }
+
+        try app.XCTStart()
+        defer { app.XCTStop() }
+
+        app.XCTExecute(uri: "/", method: .GET) { response in
+            XCTAssertEqual(response.status, .ok)
+        }
+    }
+    #endif // compiler(>=5.5)
 }
