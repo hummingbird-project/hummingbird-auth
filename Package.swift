@@ -22,6 +22,7 @@ let package = Package(
             .product(name: "Crypto", package: "swift-crypto"),
             .product(name: "ExtrasBase64", package: "swift-extras-base64"),
             .product(name: "Hummingbird", package: "hummingbird"),
+            .product(name: "_NIOConcurrency", package: "swift-nio"),
         ]),
         .target(name: "HummingbirdAuthXCT", dependencies: [
             .byName(name: "HummingbirdAuth"),
