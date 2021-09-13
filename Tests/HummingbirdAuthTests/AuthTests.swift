@@ -55,7 +55,7 @@ final class AuthTests: XCTestCase {
     func testBearer() throws {
         let app = HBApplication(testing: .embedded)
         app.router.get { request -> String? in
-            return request.bearer?.token
+            return request.authBearer?.token
         }
         try app.XCTStart()
         defer { app.XCTStop() }
@@ -72,7 +72,7 @@ final class AuthTests: XCTestCase {
     func testBasic() throws {
         let app = HBApplication(testing: .embedded)
         app.router.get { request -> String? in
-            return request.basic.map { "\($0.username):\($0.password)" }
+            return request.authBasic.map { "\($0.username):\($0.password)" }
         }
         try app.XCTStart()
         defer { app.XCTStop() }

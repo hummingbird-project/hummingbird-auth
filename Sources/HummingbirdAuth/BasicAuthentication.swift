@@ -23,7 +23,7 @@ public struct BasicAuthentication {
 
 extension HBRequest {
     /// Return Basic (username/password) authorization information from request
-    public var basic: BasicAuthentication? {
+    public var authBasic: BasicAuthentication? {
         // check for authorization header
         guard let authorization = self.headers["Authorization"].first else { return nil }
         // check for basic prefix

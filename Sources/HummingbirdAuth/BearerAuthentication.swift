@@ -21,7 +21,7 @@ public struct BearerAuthentication {
 
 extension HBRequest {
     /// Return Bearer authorization information from request
-    public var bearer: BearerAuthentication? {
+    public var authBearer: BearerAuthentication? {
         // check for authorization header
         guard let authorization = self.headers["Authorization"].first else { return nil }
         // check for bearer prefix
