@@ -19,11 +19,11 @@ public struct BearerAuthentication {
     public let token: String
 }
 
-extension HBRequest.Auth {
+extension HBRequest {
     /// Return Bearer authorization information from request
     public var bearer: BearerAuthentication? {
         // check for authorization header
-        guard let authorization = request.headers["Authorization"].first else { return nil }
+        guard let authorization = self.headers["Authorization"].first else { return nil }
         // check for bearer prefix
         guard authorization.hasPrefix("Bearer ") else { return nil }
         // return token

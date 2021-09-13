@@ -55,7 +55,7 @@ final class AuthTests: XCTestCase {
     func testBearer() throws {
         let app = HBApplication(testing: .embedded)
         app.router.get { request -> String? in
-            return request.auth.bearer?.token
+            return request.bearer?.token
         }
         try app.XCTStart()
         defer { app.XCTStop() }
@@ -72,7 +72,7 @@ final class AuthTests: XCTestCase {
     func testBasic() throws {
         let app = HBApplication(testing: .embedded)
         app.router.get { request -> String? in
-            return request.auth.basic.map { "\($0.username):\($0.password)" }
+            return request.basic.map { "\($0.username):\($0.password)" }
         }
         try app.XCTStart()
         defer { app.XCTStop() }
@@ -89,12 +89,13 @@ final class AuthTests: XCTestCase {
         }
         let app = HBApplication(testing: .embedded)
         app.router.get { request -> HTTPResponseStatus in
-            request.auth.login(User(name: "Test"))
-            XCTAssert(request.auth.has(User.self))
-            XCTAssertEqual(request.auth.get(User.self)?.name, "Test")
-            request.auth.logout(User.self)
-            XCTAssertFalse(request.auth.has(User.self))
-            XCTAssertNil(request.auth.get(User.self))
+            var request = request
+            request.authLogin(User(name: "Test"))
+            XCTAssert(request.authHas(User.self))
+            XCTAssertEqual(request.authGet(User.self)?.name, "Test")
+            request.authLogout(User.self)
+            XCTAssertFalse(request.authHas(User.self))
+            XCTAssertNil(request.authGet(User.self))
             return .accepted
         }
 
@@ -119,7 +120,7 @@ final class AuthTests: XCTestCase {
         let app = HBApplication(testing: .embedded)
         app.middleware.add(HBTestAuthenticator())
         app.router.get { request -> HTTPResponseStatus in
-            guard request.auth.has(User.self) else { return .unauthorized }
+            guard request.authHas(User.self) else { return .unauthorized }
             return .ok
         }
 

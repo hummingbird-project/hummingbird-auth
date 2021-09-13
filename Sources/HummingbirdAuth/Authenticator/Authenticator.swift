@@ -67,8 +67,9 @@ extension HBAuthenticator {
     public func apply(to request: HBRequest, next: HBResponder) -> EventLoopFuture<HBResponse> {
         authenticate(request: request)
             .flatMap { authenticated in
+                var request = request
                 if let authenticated = authenticated {
-                    request.auth.login(authenticated)
+                    request.authLogin(authenticated)
                 }
                 return next.respond(to: request)
             }

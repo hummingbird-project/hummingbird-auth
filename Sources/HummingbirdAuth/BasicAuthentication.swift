@@ -21,11 +21,11 @@ public struct BasicAuthentication {
     public let password: String
 }
 
-extension HBRequest.Auth {
+extension HBRequest {
     /// Return Basic (username/password) authorization information from request
     public var basic: BasicAuthentication? {
         // check for authorization header
-        guard let authorization = request.headers["Authorization"].first else { return nil }
+        guard let authorization = self.headers["Authorization"].first else { return nil }
         // check for basic prefix
         guard authorization.hasPrefix("Basic ") else { return nil }
         // extract base64 data
