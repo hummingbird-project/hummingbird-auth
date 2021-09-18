@@ -161,7 +161,7 @@ final class AuthTests: XCTestCase {
         let app = HBApplication(testing: .live)
         app.middleware.add(HBTestAuthenticator())
         app.router.get { request -> HTTPResponseStatus in
-            guard request.auth.has(User.self) else { return .unauthorized }
+            guard request.authHas(User.self) else { return .unauthorized }
             return .ok
         }
 
