@@ -13,7 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 import Hummingbird
-import NIO
+import NIOCore
 
 /// Protocol for objects that can be returned by an `HBAuthenticator`.
 public protocol HBAuthenticatable {}

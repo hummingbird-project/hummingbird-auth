@@ -13,6 +13,7 @@ let package = Package(
     dependencies: [
         .package(url: "https://github.com/hummingbird-project/hummingbird.git", .branch("main")),
         .package(url: "https://github.com/apple/swift-crypto.git", from: "1.0.0"),
+        .package(url: "https://github.com/apple/swift-nio.git", from: "2.32.0"),
         .package(url: "https://github.com/swift-extras/swift-extras-base64.git", .upToNextMinor(from: "0.7.0")),
     ],
     targets: [
@@ -31,6 +32,7 @@ let package = Package(
             .byName(name: "HummingbirdAuth"),
             .byName(name: "HummingbirdAuthXCT"),
             .product(name: "HummingbirdXCT", package: "hummingbird"),
+            .product(name: "NIOPosix", package: "swift-nio"),
         ]),
     ]
 )

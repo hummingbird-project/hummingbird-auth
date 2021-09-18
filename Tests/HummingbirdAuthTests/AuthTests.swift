@@ -16,6 +16,7 @@ import Hummingbird
 import HummingbirdAuth
 import HummingbirdAuthXCT
 import HummingbirdXCT
+import NIOPosix
 import XCTest
 
 final class AuthTests: XCTestCase {
