@@ -146,7 +146,7 @@ final class AuthTests: XCTestCase {
         XCTAssertEqual(data, data2)
     }
 
-    #if compiler(>=5.5)
+    #if compiler(>=5.5) && canImport(_Concurrency)
     @available(macOS 12.0, iOS 15.0, watchOS 8.0, tvOS 15.0, *)
     func testAsyncAuthenticator() throws {
         struct User: HBAuthenticatable {
@@ -172,5 +172,5 @@ final class AuthTests: XCTestCase {
             XCTAssertEqual(response.status, .ok)
         }
     }
-    #endif // compiler(>=5.5)
+    #endif // compiler(>=5.5) && canImport(_Concurrency)
 }
