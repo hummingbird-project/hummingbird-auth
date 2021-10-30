@@ -16,7 +16,7 @@ import Hummingbird
 import NIOCore
 
 /// Protocol for objects that can be returned by an `HBAuthenticator`.
-public protocol HBAuthenticatable: Sendable {}
+public protocol HBAuthenticatable: HBSendable {}
 
 /// Authenticators are middleware that are used to check if a request is authenticated and then augment the request with the
 /// authentication data.
