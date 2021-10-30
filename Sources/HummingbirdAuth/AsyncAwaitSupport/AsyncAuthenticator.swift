@@ -14,8 +14,8 @@
 
 #if compiler(>=5.5) && canImport(_Concurrency)
 
-import NIOCore
 import Hummingbird
+import NIOCore
 
 /// Authenticators are middleware that are used to check if a request is authenticated and then augment the request with the
 /// authentication data. This version uses an async/await style method for authentication
