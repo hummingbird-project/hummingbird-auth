@@ -20,6 +20,6 @@ public struct IsAuthenticatedMiddleware<Auth: HBAuthenticatable>: HBMiddleware {
 
     public func apply(to request: HBRequest, next: HBResponder) -> EventLoopFuture<HBResponse> {
         guard request.authHas(Auth.self) else { return request.failure(.unauthorized) }
-        return next.respond(to: request);
+        return next.respond(to: request)
     }
 }

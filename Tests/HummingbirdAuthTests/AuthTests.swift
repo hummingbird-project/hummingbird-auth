@@ -147,12 +147,12 @@ final class AuthTests: XCTestCase {
         app.router.group()
             .add(middleware: HBTestAuthenticator())
             .add(middleware: IsAuthenticatedMiddleware(User.self))
-            .get("authenticated") { request -> HTTPResponseStatus in
+            .get("authenticated") { _ -> HTTPResponseStatus in
                 return .ok
             }
         app.router.group()
             .add(middleware: IsAuthenticatedMiddleware(User.self))
-            .get("unauthenticated") { request -> HTTPResponseStatus in
+            .get("unauthenticated") { _ -> HTTPResponseStatus in
                 return .ok
             }
 
