@@ -133,6 +133,40 @@ final class AuthTests: XCTestCase {
         }
     }
 
+    func testIsAuthenticatedMiddleware() throws {
+        struct User: HBAuthenticatable {
+            let name: String
+        }
+        struct HBTestAuthenticator: HBAuthenticator {
+            func authenticate(request: HBRequest) -> EventLoopFuture<User?> {
+                return request.success(User(name: "Adam"))
+            }
+        }
+
+        let app = HBApplication(testing: .embedded)
+        app.router.group()
+            .add(middleware: HBTestAuthenticator())
+            .add(middleware: IsAuthenticatedMiddleware(User.self))
+            .get("authenticated") { request -> HTTPResponseStatus in
+                return .ok
+            }
+        app.router.group()
+            .add(middleware: IsAuthenticatedMiddleware(User.self))
+            .get("unauthenticated") { request -> HTTPResponseStatus in
+                return .ok
+            }
+
+        try app.XCTStart()
+        defer { app.XCTStop() }
+
+        app.XCTExecute(uri: "/authenticated", method: .GET) { response in
+            XCTAssertEqual(response.status, .ok)
+        }
+        app.XCTExecute(uri: "/unauthenticated", method: .GET) { response in
+            XCTAssertEqual(response.status, .unauthorized)
+        }
+    }
+
     func testBase32() {
         let data = [UInt8]("ABCDEFGHITJKLMNOPQRSTUVWXYZabcedefé".utf8)
         let base32 = String(base32Encoding: data)
