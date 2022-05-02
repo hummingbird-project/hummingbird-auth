@@ -37,11 +37,11 @@ public enum Bcrypt {
         }
 
         // create hashed data
-        let nullEndedHashSpace = Int(BCRYPT_HASHSPACE+1)
+        let nullEndedHashSpace = Int(BCRYPT_HASHSPACE + 1)
         let hashedData = [CChar](unsafeUninitializedCapacity: nullEndedHashSpace) { bytes, count in
             count = nullEndedHashSpace
             _ = c_hb_bcrypt_hashpass(text, salt, bytes.baseAddress, Int(BCRYPT_HASHSPACE))
-            bytes.baseAddress?[nullEndedHashSpace-1] = 0
+            bytes.baseAddress?[nullEndedHashSpace - 1] = 0
         }
 
         return String(cString: hashedData)
