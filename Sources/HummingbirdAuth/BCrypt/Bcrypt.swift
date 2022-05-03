@@ -2,7 +2,7 @@
 //
 // This source file is part of the Hummingbird server framework project
 //
-// Copyright (c) 2021-2021 the Hummingbird authors
+// Copyright (c) 2021-2022 the Hummingbird authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -31,13 +31,17 @@ public enum Bcrypt {
 
         // create random salt here, instead of using C as arc4random_buf is not always available
         let csalt: [UInt8] = (0..<BCRYPT_MAXSALT).map { _ in UInt8.random(in: .min ... .max) }
-        let salt = [CChar](unsafeUninitializedCapacity: Int(BCRYPT_SALTSPACE)) { bytes, _ in
+        let salt = [CChar](unsafeUninitializedCapacity: Int(BCRYPT_SALTSPACE)) { bytes, count in
+            count = Int(BCRYPT_SALTSPACE)
             _ = c_hb_bcrypt_initsalt_with_csalt(Int32(cost), bytes.baseAddress, Int(BCRYPT_SALTSPACE), csalt)
         }
 
         // create hashed data
-        let hashedData = [CChar](unsafeUninitializedCapacity: Int(BCRYPT_HASHSPACE)) { bytes, _ in
+        let nullEndedHashSpace = Int(BCRYPT_HASHSPACE + 1)
+        let hashedData = [CChar](unsafeUninitializedCapacity: nullEndedHashSpace) { bytes, count in
+            count = nullEndedHashSpace
             _ = c_hb_bcrypt_hashpass(text, salt, bytes.baseAddress, Int(BCRYPT_HASHSPACE))
+            bytes.baseAddress?[nullEndedHashSpace - 1] = 0
         }
 
         return String(cString: hashedData)
