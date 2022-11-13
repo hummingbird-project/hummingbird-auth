@@ -17,8 +17,8 @@
 import Hummingbird
 import NIOCore
 
-/// Authenticators are middleware that are used to check if a request is authenticated and then augment the request with the
-/// authentication data. This version uses an async/await style method for authentication
+/// Async version of Middleware to check if a request is authenticated and then augment the request with
+/// authentication data.
 @available(macOS 12.0, iOS 15.0, watchOS 8.0, tvOS 15.0, *)
 public protocol HBAsyncAuthenticator: HBAuthenticator {
     associatedtype Value = Value

@@ -18,7 +18,7 @@ import NIOCore
 /// Protocol for objects that can be returned by an `HBAuthenticator`.
 public protocol HBAuthenticatable {}
 
-/// Authenticators are middleware that are used to check if a request is authenticated and then augment the request with the
+/// Middleware to check if a request is authenticated and then augment the request with
 /// authentication data.
 ///
 /// Authenticators should conform to protocol `HBAuthenticator`. This requires you implement the function

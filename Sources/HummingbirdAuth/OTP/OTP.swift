@@ -16,7 +16,7 @@ import Crypto
 import ExtrasBase64
 import Foundation
 
-/// HashFunction used OTP generation
+/// HashFunction used in OTP generation
 public enum OTPHashFunction: String {
     case sha1 = "SHA1"
     case sha256 = "SHA256"
@@ -92,6 +92,8 @@ extension OTP {
     }
 }
 
+/// A counter based one time password (OTP)
+///
 /// A HOTP uses a counter as the message when computing the OTP. Everytime the user
 /// successfully logs in the server and client should update the commonly stored counter so
 /// the next login will require a new password.
@@ -144,6 +146,8 @@ public struct HOTP: OTP {
     }
 }
 
+/// A time based one time password (OTP)
+///
 /// A TOTP uses UNIX time ie the number of seconds since 1970 divided by a time step (normally
 /// 30 seconds) as the counter in the OTP computation. This means each password is only ever
 /// valid for the timeStep and a new password will be generated after that period.
