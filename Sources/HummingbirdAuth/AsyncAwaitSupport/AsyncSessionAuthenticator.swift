@@ -17,13 +17,17 @@
 import Hummingbird
 import NIOCore
 
-/// Async version of Middleware to check if a request is authenticated and then augment the request with
-/// authentication data.
+/// Async version of session authenticator.
 @available(macOS 10.15, iOS 13.0, tvOS 13.0, watchOS 6.0, *)
 public protocol HBAsyncSessionAuthenticator: HBAsyncAuthenticator {
     associatedtype Value = Value
     associatedtype Session: Codable
 
+    /// Convert Session object into authenticated user
+    /// - Parameters:
+    ///   - from: session
+    ///   - request: request being processed
+    /// - Returns: optional authenticated user
     func getValue(from: Session, request: HBRequest) async throws -> Value?
 }
 

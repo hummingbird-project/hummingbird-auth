@@ -14,21 +14,29 @@
 
 import Hummingbird
 
+/// Session authenticator
 public protocol HBSessionAuthenticator: HBAuthenticator {
+    /// authenticable value
     associatedtype Value = Value
+    /// session object
     associatedtype Session: Codable
 
+    /// Convert Session object into authenticated user
+    /// - Parameters:
+    ///   - from: session
+    ///   - request: request being processed
+    /// - Returns: Future holding optional authenticated user
     func getValue(from: Session, request: HBRequest) -> EventLoopFuture<Value?>
 }
 
 extension HBSessionAuthenticator {
     public func authenticate(request: HBRequest) -> EventLoopFuture<Value?> {
-        // check if session exists.
         return request.session.load().flatMap { (session: Session?) in
+            // check if session exists.
             guard let session = session else {
                 return request.success(nil)
             }
-            // find user from session
+            // find authenticated user from session
             return getValue(from: session, request: request)
         }
     }

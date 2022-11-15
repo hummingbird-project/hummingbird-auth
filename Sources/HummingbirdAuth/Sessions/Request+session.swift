@@ -19,7 +19,7 @@ import HummingbirdFoundation
 
 extension HBRequest {
     public struct Session {
-        public static let sessionCookieName = "SESSION_ID"
+        private static let sessionCookieName = "SESSION_ID"
         /// save session
         public func save<Session: Codable>(session: Session, expiresIn: TimeAmount) -> EventLoopFuture<Void> {
             let sessionId = Self.createSessionId()
@@ -49,6 +49,7 @@ extension HBRequest {
             self.request.response.setCookie(.init(name: Self.sessionCookieName, value: String(describing: id)))
         }
 
+        /// create a session id
         public static func createSessionId() -> String {
             let bytes: [UInt8] = (0..<32).map { _ in UInt8.random(in: 0...255) }
             return String(base64Encoding: bytes)
