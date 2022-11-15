@@ -20,19 +20,20 @@ import NIOCore
 /// Async version of Middleware to check if a request is authenticated and then augment the request with
 /// authentication data.
 @available(macOS 10.15, iOS 13.0, tvOS 13.0, watchOS 6.0, *)
-public protocol HBAsyncAuthenticator: HBAuthenticator {
+public protocol HBAsyncSessionAuthenticator: HBAsyncAuthenticator {
     associatedtype Value = Value
-    func authenticate(request: HBRequest) async throws -> Value?
+    associatedtype Session: Codable
+
+    func getValue(from: Session, request: HBRequest) async throws -> Value?
 }
 
-@available(macOS 10.15, iOS 13.0, tvOS 13.0, watchOS 6.0, *)
-extension HBAsyncAuthenticator {
-    public func authenticate(request: HBRequest) -> EventLoopFuture<Value?> {
-        let promise = request.eventLoop.makePromise(of: Value?.self)
-        promise.completeWithTask {
-            try await authenticate(request: request)
+extension HBAsyncSessionAuthenticator {
+    public func authenticate(request: HBRequest) async throws -> Value? {
+        let session: Session? = try await request.session.load()
+        guard let session = session else {
+            return nil
         }
-        return promise.futureResult
+        return try await getValue(from: session, request: request)
     }
 }
 
