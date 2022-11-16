@@ -19,7 +19,7 @@ import Foundation
 import Hummingbird
 
 @available(macOS 10.15, iOS 13.0, tvOS 13.0, watchOS 6.0, *)
-extension HBRequest.Session {
+extension SessionManager {
     /// save session
     public func save<Session: Codable>(session: Session, expiresIn: TimeAmount) async throws {
         let sessionId = Self.createSessionId()
