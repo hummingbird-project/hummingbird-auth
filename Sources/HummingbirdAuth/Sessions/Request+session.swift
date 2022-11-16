@@ -80,4 +80,3 @@ extension HBRequest {
     /// access session info
     public var session: SessionManager { return .init(request: self) }
 }
-
