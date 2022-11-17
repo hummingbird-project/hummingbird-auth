@@ -11,7 +11,7 @@ let package = Package(
         .library(name: "HummingbirdAuthXCT", targets: ["HummingbirdAuthXCT"]),
     ],
     dependencies: [
-        .package(url: "https://github.com/hummingbird-project/hummingbird.git", from: "0.13.1"),
+        .package(url: "https://github.com/hummingbird-project/hummingbird.git", from: "1.0.0-alpha"),
         .package(url: "https://github.com/apple/swift-crypto.git", "1.0.0"..<"3.0.0"),
         .package(url: "https://github.com/apple/swift-nio.git", from: "2.33.0"),
         .package(url: "https://github.com/swift-extras/swift-extras-base64.git", .upToNextMinor(from: "0.7.0")),
@@ -22,7 +22,7 @@ let package = Package(
             .product(name: "Crypto", package: "swift-crypto"),
             .product(name: "ExtrasBase64", package: "swift-extras-base64"),
             .product(name: "Hummingbird", package: "hummingbird"),
-            .product(name: "_NIOConcurrency", package: "swift-nio"),
+            .product(name: "HummingbirdFoundation", package: "hummingbird"),
         ]),
         .target(name: "HummingbirdAuthXCT", dependencies: [
             .byName(name: "HummingbirdAuth"),

@@ -2,7 +2,7 @@
 //
 // This source file is part of the Hummingbird server framework project
 //
-// Copyright (c) 2021-2021 the Hummingbird authors
+// Copyright (c) 2021-2022 the Hummingbird authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -20,12 +20,6 @@ import NIOPosix
 import XCTest
 
 final class AuthTests: XCTestCase {
-    func randomBuffer(size: Int) -> [UInt8] {
-        var data = [UInt8](repeating: 0, count: size)
-        data = data.map { _ in UInt8.random(in: 0...255) }
-        return data
-    }
-
     func testBcrypt() {
         let hash = Bcrypt.hash("password")
         XCTAssert(Bcrypt.verify("password", hash: hash))
@@ -167,17 +161,39 @@ final class AuthTests: XCTestCase {
         }
     }
 
-    func testBase32() {
-        let data = [UInt8]("ABCDEFGHITJKLMNOPQRSTUVWXYZabcedefé".utf8)
-        let base32 = String(base32Encoding: data)
-        XCTAssertEqual(base32, "IFBEGRCFIZDUQSKUJJFUYTKOJ5IFCUSTKRKVMV2YLFNGCYTDMVSGKZWDVE")
-    }
+    func testSessionAuthenticator() throws {
+        struct User: HBAuthenticatable {
+            let name: String
+        }
+        struct MySessionAuthenticator: HBSessionAuthenticator {
+            func getValue(from session: Int, request: HBRequest) -> EventLoopFuture<User?> {
+                return request.success(.init(name: "Adam"))
+            }
+        }
+        let app = HBApplication(testing: .embedded)
+        app.router.put("session", options: .editResponse) { request -> EventLoopFuture<HTTPResponseStatus> in
+            return request.session.save(session: 1, expiresIn: .minutes(5)).map { _ in .ok }
+        }
+        app.router.group()
+            .add(middleware: MySessionAuthenticator())
+            .get("session") { request -> HTTPResponseStatus in
+                _ = try request.authRequire(User.self)
+                return .ok
+            }
+        app.addSessions(using: .memory)
 
-    func testBase32EncodeDecode() {
-        let data = self.randomBuffer(size: Int.random(in: 4000...8000))
-        let base32 = String(base32Encoding: data)
-        let data2 = try! base32.base32decoded()
-        XCTAssertEqual(data, data2)
+        try app.XCTStart()
+        defer { app.XCTStop() }
+
+        var responseCookies: String?
+        app.XCTExecute(uri: "/session", method: .PUT) { response in
+            responseCookies = response.headers["Set-Cookie"].first
+            XCTAssertEqual(response.status, .ok)
+        }
+        let cookies = try XCTUnwrap(responseCookies)
+        app.XCTExecute(uri: "/session", method: .GET, headers: ["Cookie": cookies]) { response in
+            XCTAssertEqual(response.status, .ok)
+        }
     }
 
     #if compiler(>=5.5) && canImport(_Concurrency)
@@ -204,6 +220,52 @@ final class AuthTests: XCTestCase {
 
         app.XCTExecute(uri: "/", method: .GET) { response in
             XCTAssertEqual(response.status, .ok)
+        }
+    }
+
+    func testAsyncSessionAuthenticator() throws {
+        struct User: HBAuthenticatable {
+            let name: String
+        }
+        struct MySessionAuthenticator: HBAsyncSessionAuthenticator {
+            typealias Session = UUID
+            typealias Value = User
+
+            func getValue(from session: UUID, request: HBRequest) async throws -> User? {
+                let name = try await request.persist.get(key: session.uuidString, as: String.self)
+                return name.map { .init(name: $0) }
+            }
+        }
+        let app = HBApplication(testing: .live)
+        app.router.put("session", options: .editResponse) { request -> HTTPResponseStatus in
+            guard let basic = request.authBasic else { throw HBHTTPError(.unauthorized) }
+            let session = UUID()
+            try await request.persist.create(key: session.uuidString, value: basic.username)
+            try await request.session.save(session: session, expiresIn: .minutes(5))
+            return .ok
+        }
+        app.router.group()
+            .add(middleware: MySessionAuthenticator())
+            .get("session") { request -> String in
+                let user = try request.authRequire(User.self)
+                return user.name
+            }
+        app.addPersist(using: .memory)
+        app.addSessions()
+
+        try app.XCTStart()
+        defer { app.XCTStop() }
+
+        var responseCookies: String?
+        app.XCTExecute(uri: "/session", method: .PUT, auth: .basic(username: "adam", password: "password123")) { response in
+            responseCookies = response.headers["Set-Cookie"].first
+            XCTAssertEqual(response.status, .ok)
+        }
+        let cookies = try XCTUnwrap(responseCookies)
+        app.XCTExecute(uri: "/session", method: .GET, headers: ["Cookie": cookies]) { response in
+            XCTAssertEqual(response.status, .ok)
+            let buffer = try XCTUnwrap(response.body)
+            XCTAssertEqual(String(buffer: buffer), "adam")
         }
     }
     #endif // compiler(>=5.5) && canImport(_Concurrency)
