@@ -24,11 +24,12 @@ extension SessionManager {
     public func save<Session: Codable>(session: Session, expiresIn: TimeAmount) async throws {
         let sessionId = Self.createSessionId()
         // prefix with "hbs."
-        try await self.request.persist.set(
+        try await self.request.application.sessionStorage.driver.set(
             key: "hbs.\(sessionId)",
             value: session,
-            expires: expiresIn
-        )
+            expires: expiresIn,
+            request: self.request
+        ).get()
         setId(sessionId)
     }
 
@@ -36,7 +37,11 @@ extension SessionManager {
     public func load<Session: Codable>(as: Session.Type = Session.self) async throws -> Session? {
         guard let sessionId = getId() else { return nil }
         // prefix with "hbs."
-        return try await self.request.persist.get(key: "hbs.\(sessionId)", as: Session.self)
+        return try await self.request.application.sessionStorage.driver.get(
+            key: "hbs.\(sessionId)", 
+            as: Session.self,
+            request: self.request
+        ).get()
     }
 }
 

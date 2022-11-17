@@ -14,16 +14,35 @@
 
 import Hummingbird
 
-/// Session Manager Configuration
-public struct SessionConfiguration {
-    /// Where to store session id
-    public var sessionIDStorage: SessionManager.SessionIDStorage {
-        get { return SessionManager.sessionIDStorage }
-        nonmutating set { SessionManager.sessionIDStorage = newValue }
-    }
-}
-
 extension HBApplication {
-    /// access session info
-    public var session: SessionConfiguration { return .init() }
+    /// Accessor for session storage
+    public var sessionStorage: Persist {
+        self.extensions.get(
+            \.sessionStorage,
+            error: "To use session storage you need to set it up with `HBApplication.addSessions`."
+        )
+    }
+
+    /// Add session management to `HBApplication`.
+    /// - Parameters:
+    ///   - storage: Factory struct that will create the persist driver for session storage
+    ///   - sessionID: Where session id is stored in request/response
+    public func addSessions(
+        using storage: HBPersistDriverFactory,
+        sessionID: SessionManager.SessionIDStorage = .cookie("HB_SESSION_ID")
+    ) {
+        SessionManager.sessionID = sessionID
+        self.extensions.set(\.sessionStorage, value: .init(storage, application: self)) { persist in
+            persist.driver.shutdown()
+        }
+    }
+
+    /// Add session management to `HBApplication` using default persist memory driver
+    /// - Parameter sessionID: Where session id is stored in request/response
+    public func addSessions(
+        sessionID: SessionManager.SessionIDStorage = .cookie("HB_SESSION_ID")
+    ) {
+        SessionManager.sessionID = sessionID
+        self.extensions.set(\.sessionStorage, value: self.persist)
+    }
 }

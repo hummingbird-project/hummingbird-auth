@@ -19,7 +19,7 @@ import HummingbirdFoundation
 
 /// Manage session ids and associated data
 public struct SessionManager {
-    internal static var sessionIDStorage: SessionIDStorage = .cookie("SESSION_ID")
+    internal static var sessionID: SessionIDStorage = .cookie("SESSION_ID")
 
     // enum defining where to store a session id
     public enum SessionIDStorage {
@@ -31,10 +31,11 @@ public struct SessionManager {
     public func save<Session: Codable>(session: Session, expiresIn: TimeAmount) -> EventLoopFuture<Void> {
         let sessionId = Self.createSessionId()
         // prefix with "hbs."
-        return self.request.persist.set(
+        return self.request.application.sessionStorage.driver.set(
             key: "hbs.\(sessionId)",
             value: session,
-            expires: expiresIn
+            expires: expiresIn,
+            request: self.request
         ).map { _ in setId(sessionId) }
     }
 
@@ -42,12 +43,16 @@ public struct SessionManager {
     public func load<Session: Codable>(as: Session.Type = Session.self) -> EventLoopFuture<Session?> {
         guard let sessionId = getId() else { return self.request.success(nil) }
         // prefix with "hbs."
-        return self.request.persist.get(key: "hbs.\(sessionId)", as: Session.self)
+        return self.request.application.sessionStorage.driver.get(
+            key: "hbs.\(sessionId)",
+            as: Session.self,
+            request: self.request
+        )
     }
 
     /// Get session id gets id from request
     public func getId() -> String? {
-        switch Self.sessionIDStorage {
+        switch Self.sessionID {
         case .cookie(let cookie):
             guard let sessionCookie = request.cookies[cookie]?.value else { return nil }
             return String(sessionCookie)
@@ -59,7 +64,7 @@ public struct SessionManager {
 
     /// set session id on response
     public func setId(_ id: String) {
-        switch Self.sessionIDStorage {
+        switch Self.sessionID {
         case .cookie(let cookie):
             self.request.response.setCookie(.init(name: cookie, value: id))
         case .header(let header):
