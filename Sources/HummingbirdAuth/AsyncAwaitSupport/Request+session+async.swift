@@ -38,7 +38,7 @@ extension SessionManager {
         guard let sessionId = getId() else { return nil }
         // prefix with "hbs."
         return try await self.request.application.sessionStorage.driver.get(
-            key: "hbs.\(sessionId)", 
+            key: "hbs.\(sessionId)",
             as: Session.self,
             request: self.request
         ).get()
