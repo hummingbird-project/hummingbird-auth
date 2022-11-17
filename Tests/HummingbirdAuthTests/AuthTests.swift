@@ -180,7 +180,7 @@ final class AuthTests: XCTestCase {
                 _ = try request.authRequire(User.self)
                 return .ok
             }
-        app.addPersist(using: .memory)
+        app.addSessions(using: .memory)
 
         try app.XCTStart()
         defer { app.XCTStop() }
@@ -251,6 +251,7 @@ final class AuthTests: XCTestCase {
                 return user.name
             }
         app.addPersist(using: .memory)
+        app.addSessions()
 
         try app.XCTStart()
         defer { app.XCTStop() }
