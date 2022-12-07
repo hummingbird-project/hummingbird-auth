@@ -78,6 +78,41 @@ final class AuthTests: XCTestCase {
         }
     }
 
+    func testBcryptThread() throws {
+        let app = HBApplication(testing: .live)
+        app.addPersist(using: .memory)
+        app.router.put { request -> EventLoopFuture<HTTPResponseStatus> in
+            guard let basic = request.authBasic else { return request.failure(.unauthorized) }
+            return Bcrypt.hash(basic.password, for: request).flatMap { hash in
+                request.persist.set(key: basic.username, value: hash)
+            }.map { _ in
+                .ok
+            }
+        }
+        app.router.post { request -> EventLoopFuture<HTTPResponseStatus> in
+            guard let basic = request.authBasic else { return request.failure(.unauthorized) }
+            return request.persist.get(key: basic.username, as: String.self).flatMap { hash in
+                guard let hash = hash else { return request.failure(.unauthorized) }
+                return Bcrypt.verify(basic.password, hash: hash, for: request)
+            }.map { (result: Bool) in
+                if result {
+                    return .ok
+                } else {
+                    return .unauthorized
+                }
+            }
+        }
+        try app.XCTStart()
+        defer { app.XCTStop() }
+
+        app.XCTExecute(uri: "/", method: .PUT, auth: .basic(username: "testuser", password: "testpassword123")) { response in
+            XCTAssertEqual(response.status, .ok)
+        }
+        app.XCTExecute(uri: "/", method: .POST, auth: .basic(username: "testuser", password: "testpassword123")) { response in
+            XCTAssertEqual(response.status, .ok)
+        }
+    }
+
     func testAuth() throws {
         struct User: HBAuthenticatable {
             let name: String
