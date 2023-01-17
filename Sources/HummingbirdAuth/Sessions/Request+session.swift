@@ -51,7 +51,7 @@ public struct SessionManager {
     }
 
     /// Get session id gets id from request
-    public func getId() -> String? {
+    func getId() -> String? {
         switch Self.sessionID {
         case .cookie(let cookie):
             guard let sessionCookie = request.cookies[cookie]?.value else { return nil }
@@ -63,7 +63,7 @@ public struct SessionManager {
     }
 
     /// set session id on response
-    public func setId(_ id: String) {
+    func setId(_ id: String) {
         switch Self.sessionID {
         case .cookie(let cookie):
             self.request.response.setCookie(.init(name: cookie, value: id))
@@ -73,7 +73,7 @@ public struct SessionManager {
     }
 
     /// create a session id
-    public static func createSessionId() -> String {
+    static func createSessionId() -> String {
         let bytes: [UInt8] = (0..<32).map { _ in UInt8.random(in: 0...255) }
         return String(base64Encoding: bytes)
     }
