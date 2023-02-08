@@ -30,3 +30,7 @@ extension HBRequest {
         return .init(token: String(authorization.dropFirst("Bearer ".count)))
     }
 }
+
+#if compiler(>=5.6)
+extension BearerAuthentication: Sendable {}
+#endif
