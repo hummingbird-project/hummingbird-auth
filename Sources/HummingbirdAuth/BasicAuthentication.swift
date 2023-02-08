@@ -41,3 +41,7 @@ extension HBRequest {
         return .init(username: String(split[0]), password: String(split[1]))
     }
 }
+
+#if compiler(>=5.6)
+extension BasicAuthentication: Sendable {}
+#endif

@@ -228,3 +228,9 @@ extension Array where Element == UInt8 {
         }
     }
 }
+
+#if compiler(>=5.6)
+extension OTPHashFunction: Sendable {}
+extension TOTP: Sendable {}
+extension HOTP: Sendable {}
+#endif

@@ -85,3 +85,8 @@ extension HBRequest {
     /// access session info
     public var session: SessionManager { return .init(request: self) }
 }
+
+#if compiler(>=5.6)
+extension SessionManager.SessionIDStorage: Sendable {}
+extension SessionManager: Sendable {}
+#endif
