@@ -60,7 +60,7 @@ final class AuthTests: XCTestCase {
             XCTAssertEqual(String(buffer: body), "1234567890")
         }
         try app.XCTExecute(uri: "/", method: .GET, auth: .basic(username: "adam", password: "1234")) { response in
-            XCTAssertEqual(response.status, .notFound)
+            XCTAssertEqual(response.status, .noContent)
         }
     }
 
