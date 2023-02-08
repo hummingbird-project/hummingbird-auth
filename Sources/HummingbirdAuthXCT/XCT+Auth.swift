@@ -80,15 +80,15 @@ extension HBApplication {
         auth: HBXCTAuthentication,
         body: ByteBuffer? = nil,
         testCallback: @escaping (HBXCTResponse) throws -> Void
-    ) {
+    ) throws {
         let request = auth.apply(uri: uri, method: method, headers: headers, body: body)
-        XCTAssertNoThrow(try self.xct.execute(
+        try self.xct.execute(
             uri: request.uri,
             method: request.method,
             headers: request.headers,
             body: request.body
         ).flatMapThrowing { response in
             try testCallback(response)
-        }.wait())
+        }.wait()
     }
 }
