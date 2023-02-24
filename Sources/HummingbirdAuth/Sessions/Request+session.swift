@@ -29,7 +29,7 @@ public struct SessionManager {
 
     /// save session
     public func save<Session: Codable>(session: Session, expiresIn: TimeAmount) -> EventLoopFuture<Void> {
-        let sessionId = Self.createSessionId()
+        let sessionId = self.getId() ?? Self.createSessionId()
         // prefix with "hbs."
         return self.request.application.sessionStorage.driver.set(
             key: "hbs.\(sessionId)",
