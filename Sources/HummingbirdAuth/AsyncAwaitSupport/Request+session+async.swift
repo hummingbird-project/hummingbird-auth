@@ -20,7 +20,12 @@ import Hummingbird
 
 @available(macOS 10.15, iOS 13.0, tvOS 13.0, watchOS 6.0, *)
 extension SessionManager {
-    /// save session
+    /// save new or exising session
+    ///
+    /// Saving a new session will create a new session id and save that to the
+    /// response. Thus a route that uses `save` needs to have the `.editResponse`
+    /// option set. If you know the session already exists consider using
+    /// `update` instead.
     public func save<Session: Codable>(session: Session, expiresIn: TimeAmount) async throws {
         let sessionId = Self.createSessionId()
         // prefix with "hbs."
@@ -31,6 +36,20 @@ extension SessionManager {
             request: self.request
         ).get()
         setId(sessionId)
+    }
+
+    /// update existing session
+    ///
+    /// If session does not exist then this function will do nothing
+    public func update<Session: Codable>(session: Session, expiresIn: TimeAmount) async throws {
+        guard let sessionId = getId() else { return }
+        // prefix with "hbs."
+        try await self.request.application.sessionStorage.driver.set(
+            key: "hbs.\(sessionId)",
+            value: session,
+            expires: expiresIn,
+            request: self.request
+        ).get()
     }
 
     /// load session

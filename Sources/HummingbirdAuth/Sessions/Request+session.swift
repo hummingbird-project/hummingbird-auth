@@ -27,7 +27,12 @@ public struct SessionManager {
         case header(String)
     }
 
-    /// save session
+    /// save new or exising session
+    ///
+    /// Saving a new session will create a new session id and save that to the
+    /// response. Thus a route that uses `save` needs to have the `.editResponse`
+    /// option set. If you know the session already exists consider using
+    /// `update` instead.
     public func save<Session: Codable>(session: Session, expiresIn: TimeAmount) -> EventLoopFuture<Void> {
         let sessionId = self.getId() ?? Self.createSessionId()
         // prefix with "hbs."
@@ -37,6 +42,22 @@ public struct SessionManager {
             expires: expiresIn,
             request: self.request
         ).map { _ in setId(sessionId) }
+    }
+
+    /// update existing session
+    ///
+    /// If session does not exist then this function will do nothing
+    public func update<Session: Codable>(session: Session, expiresIn: TimeAmount) -> EventLoopFuture<Void> {
+        guard let sessionId = self.getId() else {
+            return self.request.success(())
+        }
+        // prefix with "hbs."
+        return self.request.application.sessionStorage.driver.set(
+            key: "hbs.\(sessionId)",
+            value: session,
+            expires: expiresIn,
+            request: self.request
+        )
     }
 
     /// load session
@@ -64,6 +85,10 @@ public struct SessionManager {
 
     /// set session id on response
     func setId(_ id: String) {
+        precondition(
+            self.request.extensions.get(\.response) != nil,
+            "Saving a session involves editing the response via HBRequest.response which cannot be done outside of a route without the .editResponse option set"
+        )
         switch Self.sessionID {
         case .cookie(let cookie):
             self.request.response.setCookie(.init(name: cookie, value: id))
