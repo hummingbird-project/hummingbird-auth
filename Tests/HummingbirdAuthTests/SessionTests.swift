@@ -181,5 +181,25 @@ final class SessionTests: XCTestCase {
         }
     }
 
+    @available(macOS 12.0, iOS 15.0, watchOS 8.0, tvOS 15.0, *)
+    func testSessionUpdateError() async throws {
+        let app = HBApplication(testing: .asyncTest)
+        app.addSessions(using: .memory)
+        app.router.post("update", options: .editResponse) { request -> HTTPResponseStatus in
+            do {
+                try await request.session.update(session: "hello", expiresIn: .minutes(10))
+                return .ok
+            } catch {
+                return .badRequest
+            }
+        }
+        try app.XCTStart()
+        defer { app.XCTStop() }
+
+        try app.XCTExecute(uri: "/update", method: .POST) { response in
+            XCTAssertEqual(response.status, .badRequest)
+        }
+    }
+
     #endif // compiler(>=5.5) && canImport(_Concurrency)
 }

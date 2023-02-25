@@ -19,8 +19,22 @@ import HummingbirdFoundation
 
 /// Manage session ids and associated data
 public struct SessionManager {
-    internal static var sessionID: SessionIDStorage = .cookie("SESSION_ID")
+    /// SessionManager Errors
+    public struct Error: Swift.Error, Equatable {
+        enum ErrorType {
+            case sessionDoesNotExist
+        }
 
+        let type: ErrorType
+        private init(_ type: ErrorType) {
+            self.type = type
+        }
+
+        /// Session does not exist
+        public static var sessionDoesNotExist: Self { .init(.sessionDoesNotExist) }
+    }
+
+    internal static var sessionID: SessionIDStorage = .cookie("SESSION_ID")
     // enum defining where to store a session id
     public enum SessionIDStorage {
         case cookie(String)
@@ -49,7 +63,7 @@ public struct SessionManager {
     /// If session does not exist then this function will do nothing
     public func update<Session: Codable>(session: Session, expiresIn: TimeAmount) -> EventLoopFuture<Void> {
         guard let sessionId = self.getId() else {
-            return self.request.success(())
+            return self.request.failure(Error.sessionDoesNotExist)
         }
         // prefix with "hbs."
         return self.request.application.sessionStorage.driver.set(

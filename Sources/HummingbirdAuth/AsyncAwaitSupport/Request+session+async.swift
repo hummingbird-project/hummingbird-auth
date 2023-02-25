@@ -42,7 +42,9 @@ extension SessionManager {
     ///
     /// If session does not exist then this function will do nothing
     public func update<Session: Codable>(session: Session, expiresIn: TimeAmount) async throws {
-        guard let sessionId = getId() else { return }
+        guard let sessionId = self.getId() else {
+            throw Error.sessionDoesNotExist
+        }
         // prefix with "hbs."
         try await self.request.application.sessionStorage.driver.set(
             key: "hbs.\(sessionId)",
