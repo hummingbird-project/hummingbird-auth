@@ -146,15 +146,15 @@ final class SessionTests: XCTestCase {
 
         let app = HBApplication(testing: .asyncTest)
         app.addSessions(using: .memory)
-        app.router.post("save", options: .editResponse) { request in
+        app.router.post("save", options: .editResponse) { request -> HTTPResponseStatus in
             guard let name = request.uri.queryParameters.get("name") else { throw HBHTTPError(.badRequest) }
             try await request.session.save(session: User(name: name), expiresIn: .minutes(10))
-            return HTTPResponseStatus.ok
+            return .ok
         }
-        app.router.post("update") { request in
+        app.router.post("update") { request -> HTTPResponseStatus in
             guard let name = request.uri.queryParameters.get("name") else { throw HBHTTPError(.badRequest) }
             try await request.session.update(session: User(name: name), expiresIn: .minutes(10))
-            return HTTPResponseStatus.ok
+            return .ok
         }
         app.router.get("name") { request -> String in
             guard let user = try await request.session.load(as: User.self) else { throw HBHTTPError(.unauthorized) }
