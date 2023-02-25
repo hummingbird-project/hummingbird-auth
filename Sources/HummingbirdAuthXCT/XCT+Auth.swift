@@ -91,4 +91,24 @@ extension HBApplication {
             try testCallback(response)
         }.wait()
     }
+
+    /// Send request with authentication and call test callback on the response returned
+    public func XCTExecute<Return>(
+        uri: String,
+        method: HTTPMethod,
+        headers: HTTPHeaders = [:],
+        auth: HBXCTAuthentication,
+        body: ByteBuffer? = nil,
+        testCallback: @escaping (HBXCTResponse) throws -> Return
+    ) throws -> Return {
+        let request = auth.apply(uri: uri, method: method, headers: headers, body: body)
+        return try self.xct.execute(
+            uri: request.uri,
+            method: request.method,
+            headers: request.headers,
+            body: request.body
+        ).flatMapThrowing { response in
+            try testCallback(response)
+        }.wait()
+    }
 }
