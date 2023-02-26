@@ -40,7 +40,7 @@ extension SessionManager {
 
     /// update existing session
     ///
-    /// If session does not exist then this function will do nothing
+    /// If session does not exist then a `sessionDoesNotExist` error will be thrown
     public func update<Session: Codable>(session: Session, expiresIn: TimeAmount) async throws {
         guard let sessionId = self.getId() else {
             throw Error.sessionDoesNotExist
