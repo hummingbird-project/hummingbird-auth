@@ -105,7 +105,7 @@ final class SessionTests: XCTestCase {
                 return name.map { .init(name: $0) }
             }
         }
-        let app = HBApplication(testing: .live)
+        let app = HBApplication(testing: .asyncTest)
         app.router.put("session", options: .editResponse) { request -> HTTPResponseStatus in
             guard let basic = request.authBasic else { throw HBHTTPError(.unauthorized) }
             let session = UUID()
@@ -137,5 +137,69 @@ final class SessionTests: XCTestCase {
             XCTAssertEqual(String(buffer: buffer), "adam")
         }
     }
+
+    @available(macOS 12.0, iOS 15.0, watchOS 8.0, tvOS 15.0, *)
+    func testSessionUpdate() async throws {
+        struct User: Codable {
+            let name: String
+        }
+
+        let app = HBApplication(testing: .asyncTest)
+        app.addSessions(using: .memory)
+        app.router.post("save", options: .editResponse) { request -> HTTPResponseStatus in
+            guard let name = request.uri.queryParameters.get("name") else { throw HBHTTPError(.badRequest) }
+            try await request.session.save(session: User(name: name), expiresIn: .minutes(10))
+            return .ok
+        }
+        app.router.post("update") { request -> HTTPResponseStatus in
+            guard let name = request.uri.queryParameters.get("name") else { throw HBHTTPError(.badRequest) }
+            try await request.session.update(session: User(name: name), expiresIn: .minutes(10))
+            return .ok
+        }
+        app.router.get("name") { request -> String in
+            guard let user = try await request.session.load(as: User.self) else { throw HBHTTPError(.unauthorized) }
+            return user.name
+        }
+
+        try app.XCTStart()
+        defer { app.XCTStop() }
+
+        let cookies = try app.XCTExecute(uri: "/save?name=john", method: .POST) { response -> String? in
+            XCTAssertEqual(response.status, .ok)
+            return response.headers["Set-Cookie"].first
+        }
+        try app.XCTExecute(uri: "/update?name=jane", method: .POST, headers: cookies.map { ["Cookie": $0] } ?? [:]) { response in
+            XCTAssertEqual(response.status, .ok)
+            XCTAssertNil(response.headers["Set-Cookie"].first)
+        }
+
+        // get save username
+        try app.XCTExecute(uri: "/name", method: .GET, headers: cookies.map { ["Cookie": $0] } ?? [:]) { response in
+            XCTAssertEqual(response.status, .ok)
+            let buffer = try XCTUnwrap(response.body)
+            XCTAssertEqual(String(buffer: buffer), "jane")
+        }
+    }
+
+    @available(macOS 12.0, iOS 15.0, watchOS 8.0, tvOS 15.0, *)
+    func testSessionUpdateError() async throws {
+        let app = HBApplication(testing: .asyncTest)
+        app.addSessions(using: .memory)
+        app.router.post("update", options: .editResponse) { request -> HTTPResponseStatus in
+            do {
+                try await request.session.update(session: "hello", expiresIn: .minutes(10))
+                return .ok
+            } catch {
+                return .badRequest
+            }
+        }
+        try app.XCTStart()
+        defer { app.XCTStop() }
+
+        try app.XCTExecute(uri: "/update", method: .POST) { response in
+            XCTAssertEqual(response.status, .badRequest)
+        }
+    }
+
     #endif // compiler(>=5.5) && canImport(_Concurrency)
 }
