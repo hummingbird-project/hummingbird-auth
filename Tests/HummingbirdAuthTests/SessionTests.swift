@@ -44,10 +44,9 @@ final class SessionTests: XCTestCase {
         try app.XCTStart()
         defer { app.XCTStop() }
 
-        var responseCookies: String?
-        try app.XCTExecute(uri: "/session", method: .PUT) { response in
-            responseCookies = response.headers["Set-Cookie"].first
+        let responseCookies = try app.XCTExecute(uri: "/session", method: .PUT) { response -> String? in
             XCTAssertEqual(response.status, .ok)
+            return response.headers["Set-Cookie"].first
         }
         let cookies = try XCTUnwrap(responseCookies)
         try app.XCTExecute(uri: "/session", method: .GET, headers: ["Cookie": cookies]) { response in
@@ -79,10 +78,9 @@ final class SessionTests: XCTestCase {
         try app.XCTStart()
         defer { app.XCTStop() }
 
-        var sessionHeader: String?
-        try app.XCTExecute(uri: "/session", method: .PUT) { response in
-            sessionHeader = response.headers["session_id"].first
+        let sessionHeader = try app.XCTExecute(uri: "/session", method: .PUT) { response -> String? in
             XCTAssertEqual(response.status, .ok)
+            return response.headers["session_id"].first
         }
         let header = try XCTUnwrap(sessionHeader)
         try app.XCTExecute(uri: "/session", method: .GET, headers: ["session_id": header]) { response in
@@ -125,10 +123,13 @@ final class SessionTests: XCTestCase {
         try app.XCTStart()
         defer { app.XCTStop() }
 
-        var responseCookies: String?
-        try app.XCTExecute(uri: "/session", method: .PUT, auth: .basic(username: "adam", password: "password123")) { response in
-            responseCookies = response.headers["Set-Cookie"].first
+        let responseCookies = try app.XCTExecute(
+            uri: "/session",
+            method: .PUT,
+            auth: .basic(username: "adam", password: "password123")
+        ) { response -> String? in
             XCTAssertEqual(response.status, .ok)
+            return response.headers["Set-Cookie"].first
         }
         let cookies = try XCTUnwrap(responseCookies)
         try app.XCTExecute(uri: "/session", method: .GET, headers: ["Cookie": cookies]) { response in
