@@ -220,7 +220,7 @@ final class AuthTests: XCTestCase {
         try app.XCTStart()
         defer { app.XCTStop() }
 
-        let responseCookies = try app.XCTExecute(uri: "/session", method: .PUT) { response in
+        let responseCookies = try app.XCTExecute(uri: "/session", method: .PUT) { response -> String? in
             XCTAssertEqual(response.status, .ok)
             return response.headers["Set-Cookie"].first
         }
@@ -290,7 +290,11 @@ final class AuthTests: XCTestCase {
         try app.XCTStart()
         defer { app.XCTStop() }
 
-        let responseCookies = try app.XCTExecute(uri: "/session", method: .PUT, auth: .basic(username: "adam", password: "password123")) { response in
+        let responseCookies = try app.XCTExecute(
+            uri: "/session",
+            method: .PUT,
+            auth: .basic(username: "adam", password: "password123")
+        ) { response -> String? in
             XCTAssertEqual(response.status, .ok)
             return response.headers["Set-Cookie"].first
         }
