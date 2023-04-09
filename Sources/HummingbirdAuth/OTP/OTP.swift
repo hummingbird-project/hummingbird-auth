@@ -17,7 +17,7 @@ import ExtrasBase64
 import Foundation
 
 /// HashFunction used in OTP generation
-public enum OTPHashFunction: String {
+public enum OTPHashFunction: String, Sendable {
     case sha1 = "SHA1"
     case sha256 = "SHA256"
     case sha512 = "SHA512"
@@ -97,7 +97,7 @@ extension OTP {
 /// A HOTP uses a counter as the message when computing the OTP. Everytime the user
 /// successfully logs in the server and client should update the commonly stored counter so
 /// the next login will require a new password.
-public struct HOTP: OTP {
+public struct HOTP: OTP, Sendable {
     public let secret: String
     public let length: Int
     public let hashFunction: OTPHashFunction
@@ -151,7 +151,7 @@ public struct HOTP: OTP {
 /// A TOTP uses UNIX time ie the number of seconds since 1970 divided by a time step (normally
 /// 30 seconds) as the counter in the OTP computation. This means each password is only ever
 /// valid for the timeStep and a new password will be generated after that period.
-public struct TOTP: OTP {
+public struct TOTP: OTP, Sendable {
     public let secret: String
     public let length: Int
     public let hashFunction: OTPHashFunction
@@ -228,9 +228,3 @@ extension Array where Element == UInt8 {
         }
     }
 }
-
-#if compiler(>=5.6)
-extension OTPHashFunction: Sendable {}
-extension TOTP: Sendable {}
-extension HOTP: Sendable {}
-#endif

@@ -88,8 +88,6 @@ final class SessionTests: XCTestCase {
         }
     }
 
-    #if compiler(>=5.5) && canImport(_Concurrency)
-    @available(macOS 12.0, iOS 15.0, watchOS 8.0, tvOS 15.0, *)
     func testAsyncSessionAuthenticator() throws {
         struct User: HBAuthenticatable {
             let name: String
@@ -139,7 +137,6 @@ final class SessionTests: XCTestCase {
         }
     }
 
-    @available(macOS 12.0, iOS 15.0, watchOS 8.0, tvOS 15.0, *)
     func testSessionUpdate() async throws {
         struct User: Codable {
             let name: String
@@ -182,7 +179,6 @@ final class SessionTests: XCTestCase {
         }
     }
 
-    @available(macOS 12.0, iOS 15.0, watchOS 8.0, tvOS 15.0, *)
     func testSessionUpdateError() async throws {
         let app = HBApplication(testing: .asyncTest)
         app.addSessions(using: .memory)
@@ -201,6 +197,4 @@ final class SessionTests: XCTestCase {
             XCTAssertEqual(response.status, .badRequest)
         }
     }
-
-    #endif // compiler(>=5.5) && canImport(_Concurrency)
 }

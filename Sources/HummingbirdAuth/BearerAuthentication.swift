@@ -15,7 +15,7 @@
 import Hummingbird
 
 /// Bearer authentication information extracted from request header "Authorization"
-public struct BearerAuthentication {
+public struct BearerAuthentication: Sendable {
     public let token: String
 }
 
@@ -30,7 +30,3 @@ extension HBRequest {
         return .init(token: String(authorization.dropFirst("Bearer ".count)))
     }
 }
-
-#if compiler(>=5.6)
-extension BearerAuthentication: Sendable {}
-#endif

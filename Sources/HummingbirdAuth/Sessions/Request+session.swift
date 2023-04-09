@@ -18,7 +18,7 @@ import Hummingbird
 import HummingbirdFoundation
 
 /// Manage session ids and associated data
-public struct SessionManager {
+public struct SessionManager: Sendable {
     /// SessionManager Errors
     public struct Error: Swift.Error, Equatable {
         enum ErrorType {
@@ -36,7 +36,7 @@ public struct SessionManager {
 
     internal static var sessionID: SessionIDStorage = .cookie("SESSION_ID")
     // enum defining where to store a session id
-    public enum SessionIDStorage {
+    public enum SessionIDStorage: Sendable {
         case cookie(String)
         case header(String)
     }
@@ -124,8 +124,3 @@ extension HBRequest {
     /// access session info
     public var session: SessionManager { return .init(request: self) }
 }
-
-#if compiler(>=5.6)
-extension SessionManager.SessionIDStorage: Sendable {}
-extension SessionManager: Sendable {}
-#endif
