@@ -16,7 +16,7 @@ import ExtrasBase64
 import Hummingbird
 
 /// Basic authentication information extracted from request header "Authorization"
-public struct BasicAuthentication {
+public struct BasicAuthentication: Sendable {
     public let username: String
     public let password: String
 }
@@ -41,7 +41,3 @@ extension HBRequest {
         return .init(username: String(split[0]), password: String(split[1]))
     }
 }
-
-#if compiler(>=5.6)
-extension BasicAuthentication: Sendable {}
-#endif

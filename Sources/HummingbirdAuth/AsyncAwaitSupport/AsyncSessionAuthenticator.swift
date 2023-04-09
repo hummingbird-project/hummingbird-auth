@@ -12,13 +12,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if compiler(>=5.5) && canImport(_Concurrency)
-
 import Hummingbird
 import NIOCore
 
 /// Async version of session authenticator.
-@available(macOS 10.15, iOS 13.0, tvOS 13.0, watchOS 6.0, *)
 public protocol HBAsyncSessionAuthenticator: HBAsyncAuthenticator {
     associatedtype Value = Value
     associatedtype Session: Codable
@@ -40,5 +37,3 @@ extension HBAsyncSessionAuthenticator {
         return try await getValue(from: session, request: request)
     }
 }
-
-#endif // compiler(>=5.5) && canImport(_Concurrency)
