@@ -42,7 +42,7 @@ public struct HBSessionStorage {
     }
 
     /// Initialize session storage
-    init(_ storage: HBPersistDriver, sessionID: SessionIDStorage = .cookie("SESSION_ID")) {
+    public init(_ storage: HBPersistDriver, sessionID: SessionIDStorage = .cookie("SESSION_ID")) {
         self.storage = storage
         self.sessionID = sessionID
     }
