@@ -12,13 +12,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-import ExtrasBase64
-import Foundation
 import Hummingbird
 import HummingbirdFoundation
 
 /// Manage session ids and associated data
-public struct SessionManager: Sendable {
+public struct SessionManager {
     /// SessionManager Errors
     public struct Error: Swift.Error, Equatable {
         enum ErrorType {
@@ -34,11 +32,12 @@ public struct SessionManager: Sendable {
         public static var sessionDoesNotExist: Self { .init(.sessionDoesNotExist) }
     }
 
-    internal static var sessionID: SessionIDStorage = .cookie("SESSION_ID")
-    // enum defining where to store a session id
-    public enum SessionIDStorage: Sendable {
-        case cookie(String)
-        case header(String)
+    internal static var sessionID: HBSessionStorage.SessionIDStorage = .cookie("SESSION_ID")
+
+    /// Initialize SessionManager from request
+    init(request: HBRequest) {
+        self.request = request
+        self.storage = .init(request.application.sessionStorage.driver, sessionID: Self.sessionID)
     }
 
     /// save new or exising session
@@ -48,38 +47,27 @@ public struct SessionManager: Sendable {
     /// option set. If you know the session already exists consider using
     /// `update` instead.
     public func save<Session: Codable>(session: Session, expiresIn: TimeAmount) -> EventLoopFuture<Void> {
-        let sessionId = self.getId() ?? Self.createSessionId()
-        // prefix with "hbs."
-        return self.request.application.sessionStorage.driver.set(
-            key: "hbs.\(sessionId)",
-            value: session,
-            expires: expiresIn,
+        return self.storage.save(
+            session: session,
+            expiresIn: expiresIn,
             request: self.request
-        ).map { _ in setId(sessionId) }
+        )
     }
 
     /// update existing session
     ///
     /// If session does not exist then this function will do nothing
     public func update<Session: Codable>(session: Session, expiresIn: TimeAmount) -> EventLoopFuture<Void> {
-        guard let sessionId = self.getId() else {
-            return self.request.failure(Error.sessionDoesNotExist)
-        }
-        // prefix with "hbs."
-        return self.request.application.sessionStorage.driver.set(
-            key: "hbs.\(sessionId)",
-            value: session,
-            expires: expiresIn,
+        return self.storage.update(
+            session: session,
+            expiresIn: expiresIn,
             request: self.request
         )
     }
 
     /// load session
     public func load<Session: Codable>(as: Session.Type = Session.self) -> EventLoopFuture<Session?> {
-        guard let sessionId = getId() else { return self.request.success(nil) }
-        // prefix with "hbs."
-        return self.request.application.sessionStorage.driver.get(
-            key: "hbs.\(sessionId)",
+        return self.storage.load(
             as: Session.self,
             request: self.request
         )
@@ -118,6 +106,42 @@ public struct SessionManager: Sendable {
     }
 
     let request: HBRequest
+    let storage: HBSessionStorage
+}
+
+extension SessionManager { /// save new or exising session
+    /// save new or exising session
+    ///
+    /// Saving a new session will create a new session id and save that to the
+    /// response. Thus a route that uses `save` needs to have the `.editResponse`
+    /// option set. If you know the session already exists consider using
+    /// `update` instead.
+    public func save<Session: Codable>(session: Session, expiresIn: TimeAmount) async throws {
+        return try await self.storage.save(
+            session: session,
+            expiresIn: expiresIn,
+            request: self.request
+        )
+    }
+
+    /// update existing session
+    ///
+    /// If session does not exist then a `sessionDoesNotExist` error will be thrown
+    public func update<Session: Codable>(session: Session, expiresIn: TimeAmount) async throws {
+        return try await self.storage.update(
+            session: session,
+            expiresIn: expiresIn,
+            request: self.request
+        )
+    }
+
+    /// load session
+    public func load<Session: Codable>(as: Session.Type = Session.self) async throws -> Session? {
+        return try await self.storage.load(
+            as: Session.self,
+            request: self.request
+        )
+    }
 }
 
 extension HBRequest {

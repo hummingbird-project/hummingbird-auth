@@ -29,7 +29,7 @@ extension HBApplication {
     ///   - sessionID: Where session id is stored in request/response
     public func addSessions(
         using storage: HBPersistDriverFactory,
-        sessionID: SessionManager.SessionIDStorage = .cookie("HB_SESSION_ID")
+        sessionID: HBSessionStorage.SessionIDStorage = .cookie("HB_SESSION_ID")
     ) {
         SessionManager.sessionID = sessionID
         self.extensions.set(\.sessionStorage, value: .init(storage, application: self)) { persist in
@@ -40,7 +40,7 @@ extension HBApplication {
     /// Add session management to `HBApplication` using default persist memory driver
     /// - Parameter sessionID: Where session id is stored in request/response
     public func addSessions(
-        sessionID: SessionManager.SessionIDStorage = .cookie("HB_SESSION_ID")
+        sessionID: HBSessionStorage.SessionIDStorage = .cookie("HB_SESSION_ID")
     ) {
         SessionManager.sessionID = sessionID
         self.extensions.set(\.sessionStorage, value: self.persist)
