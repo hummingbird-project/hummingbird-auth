@@ -198,7 +198,7 @@ final class SessionTests: XCTestCase {
         }
     }
 
-    func testSessionsStorageOutsideApp() throws {
+    func testSessionStorageOutsideApp() throws {
         struct User: HBAuthenticatable {
             let name: String
         }
