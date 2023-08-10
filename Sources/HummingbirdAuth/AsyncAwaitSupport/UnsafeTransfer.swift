@@ -40,10 +40,7 @@ struct HBUnsafeTransfer<Wrapped> {
     }
 }
 
-#if swift(>=5.5) && canImport(_Concurrency)
 extension HBUnsafeTransfer: @unchecked Sendable {}
-#endif
-
 extension HBUnsafeTransfer: Equatable where Wrapped: Equatable {}
 extension HBUnsafeTransfer: Hashable where Wrapped: Hashable {}
 
@@ -61,6 +58,4 @@ final class HBUnsafeMutableTransferBox<Wrapped> {
     }
 }
 
-#if swift(>=5.5) && canImport(_Concurrency)
 extension HBUnsafeMutableTransferBox: @unchecked Sendable {}
-#endif
