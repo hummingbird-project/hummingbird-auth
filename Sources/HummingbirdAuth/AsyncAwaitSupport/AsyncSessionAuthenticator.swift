@@ -36,7 +36,7 @@ public protocol HBAsyncSessionAuthenticator: HBAsyncAuthenticator {
 
 extension HBAsyncSessionAuthenticator {
     public func authenticate(request: HBRequest) async throws -> Value? {
-        let session: Session? = try await request.session.load()
+        let session: Session? = try await getSession(request: request)
         guard let session = session else {
             return nil
         }
