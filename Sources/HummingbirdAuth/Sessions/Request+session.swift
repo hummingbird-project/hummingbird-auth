@@ -32,7 +32,10 @@ public struct SessionManager: Sendable {
         public static var sessionDoesNotExist: Self { .init(.sessionDoesNotExist) }
     }
 
-    internal static var sessionID: HBSessionStorage.SessionIDStorage = .cookie("SESSION_ID")
+    // typealias for SessionIDStorage
+    public typealias SessionIDStorage = HBSessionStorage.SessionIDStorage
+
+    internal static var sessionID: SessionIDStorage = .cookie("SESSION_ID")
 
     /// Initialize SessionManager from request
     init(request: HBRequest) {
