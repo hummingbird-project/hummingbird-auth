@@ -17,7 +17,7 @@ import Hummingbird
 import HummingbirdFoundation
 
 /// Stores session data
-public struct HBSessionStorage {
+public struct HBSessionStorage: Sendable {
     /// HBSessionStorage Errors
     public struct Error: Swift.Error, Equatable {
         enum ErrorType {
@@ -43,7 +43,7 @@ public struct HBSessionStorage {
 
     /// Initialize session storage
     public init(_ storage: HBPersistDriver, sessionID: SessionIDStorage = .cookie("SESSION_ID")) {
-        self.storage = storage
+        self.storage = .init(storage)
         self.sessionID = sessionID
     }
 
@@ -56,7 +56,7 @@ public struct HBSessionStorage {
     public func save<Session: Codable>(session: Session, expiresIn: TimeAmount, request: HBRequest) -> EventLoopFuture<Void> {
         let sessionId = self.getId(request: request) ?? Self.createSessionId()
         // prefix with "hbs."
-        return self.storage.set(
+        return self.storage.wrappedValue.set(
             key: "hbs.\(sessionId)",
             value: session,
             expires: expiresIn,
@@ -72,7 +72,7 @@ public struct HBSessionStorage {
             return request.failure(Error.sessionDoesNotExist)
         }
         // prefix with "hbs."
-        return self.storage.set(
+        return self.storage.wrappedValue.set(
             key: "hbs.\(sessionId)",
             value: session,
             expires: expiresIn,
@@ -84,7 +84,7 @@ public struct HBSessionStorage {
     public func load<Session: Codable>(as: Session.Type = Session.self, request: HBRequest) -> EventLoopFuture<Session?> {
         guard let sessionId = getId(request: request) else { return request.success(nil) }
         // prefix with "hbs."
-        return self.storage.get(
+        return self.storage.wrappedValue.get(
             key: "hbs.\(sessionId)",
             as: Session.self,
             request: request
@@ -123,7 +123,10 @@ public struct HBSessionStorage {
         return String(base64Encoding: bytes)
     }
 
-    let storage: HBPersistDriver
+    // This is wrapped in an unsafe storage wrapper because I cannot conform `HBPersistDriver`
+    // to `Sendable` at this point because Redis and Fluent types do not currently conform to
+    // `Sendable` when it should be possible for this to be the case.
+    let storage: HBUnsafeTransfer<HBPersistDriver>
 }
 
 extension HBSessionStorage {
@@ -136,7 +139,7 @@ extension HBSessionStorage {
     public func save<Session: Codable>(session: Session, expiresIn: TimeAmount, request: HBRequest) async throws {
         let sessionId = Self.createSessionId()
         // prefix with "hbs."
-        try await self.storage.set(
+        try await self.storage.wrappedValue.set(
             key: "hbs.\(sessionId)",
             value: session,
             expires: expiresIn,
@@ -153,7 +156,7 @@ extension HBSessionStorage {
             throw Error.sessionDoesNotExist
         }
         // prefix with "hbs."
-        try await self.storage.set(
+        try await self.storage.wrappedValue.set(
             key: "hbs.\(sessionId)",
             value: session,
             expires: expiresIn,
@@ -165,7 +168,7 @@ extension HBSessionStorage {
     public func load<Session: Codable>(as: Session.Type = Session.self, request: HBRequest) async throws -> Session? {
         guard let sessionId = getId(request: request) else { return nil }
         // prefix with "hbs."
-        return try await self.storage.get(
+        return try await self.storage.wrappedValue.get(
             key: "hbs.\(sessionId)",
             as: Session.self,
             request: request

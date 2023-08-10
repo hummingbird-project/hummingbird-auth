@@ -16,7 +16,7 @@ import Hummingbird
 import HummingbirdFoundation
 
 /// Manage session ids and associated data
-public struct SessionManager {
+public struct SessionManager: Sendable {
     /// SessionManager Errors
     public struct Error: Swift.Error, Equatable {
         enum ErrorType {
