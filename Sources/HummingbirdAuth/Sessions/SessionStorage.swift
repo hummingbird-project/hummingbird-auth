@@ -91,6 +91,16 @@ public struct HBSessionStorage: Sendable {
         )
     }
 
+    /// delete session
+    public func delete(request: HBRequest) -> EventLoopFuture<Void> {
+        guard let sessionId = getId(request: request) else { return request.success(()) }
+        // prefix with "hbs."
+        return self.storage.wrappedValue.remove(
+            key: "hbs.\(sessionId)",
+            request: request
+        )
+    }
+
     /// Get session id gets id from request
     func getId(request: HBRequest) -> String? {
         switch self.sessionID {
@@ -171,6 +181,16 @@ extension HBSessionStorage {
         return try await self.storage.wrappedValue.get(
             key: "hbs.\(sessionId)",
             as: Session.self,
+            request: request
+        ).get()
+    }
+
+    /// delete session
+    public func delete(request: HBRequest) async throws {
+        guard let sessionId = getId(request: request) else { return }
+        // prefix with "hbs."
+        return try await self.storage.wrappedValue.remove(
+            key: "hbs.\(sessionId)",
             request: request
         ).get()
     }

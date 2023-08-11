@@ -76,6 +76,13 @@ public struct SessionManager: Sendable {
         )
     }
 
+    /// delete session
+    public func delete() -> EventLoopFuture<Void> {
+        return self.storage.delete(
+            request: self.request
+        )
+    }
+
     /// Get session id gets id from request
     func getId() -> String? {
         switch Self.sessionID {
@@ -142,6 +149,13 @@ extension SessionManager { /// save new or exising session
     public func load<Session: Codable>(as: Session.Type = Session.self) async throws -> Session? {
         return try await self.storage.load(
             as: Session.self,
+            request: self.request
+        )
+    }
+
+    /// delete session
+    public func delete() async throws {
+        return try await self.storage.delete(
             request: self.request
         )
     }
