@@ -111,7 +111,7 @@ public struct HBSessionStorage: Sendable {
         )
         switch self.sessionID {
         case .cookie(let cookie):
-            request.response.setCookie(.init(name: cookie, value: id))
+            request.response.setCookie(.init(name: cookie, value: id, path: "/"))
         case .header(let header):
             request.response.headers.replaceOrAdd(name: header, value: id)
         }
