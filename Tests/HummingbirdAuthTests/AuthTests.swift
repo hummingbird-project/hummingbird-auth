@@ -47,51 +47,49 @@ final class AuthTests: XCTestCase {
         _ = try EventLoopFuture.whenAllSucceed(futures, on: eventLoopGroup.next()).wait()
     }
 
-    func testBearer() throws {
-        let app = HBApplication(testing: .embedded)
+    func testBearer() async throws {
+        let app = HBApplicationBuilder()
         app.router.get { request -> String? in
             return request.authBearer?.token
         }
-        try app.XCTStart()
-        defer { app.XCTStop() }
-
-        try app.XCTExecute(uri: "/", method: .GET, auth: .bearer("1234567890")) { response in
-            let body = try XCTUnwrap(response.body)
-            XCTAssertEqual(String(buffer: body), "1234567890")
-        }
-        try app.XCTExecute(uri: "/", method: .GET, auth: .basic(username: "adam", password: "1234")) { response in
-            XCTAssertEqual(response.status, .noContent)
+        try await app.buildAndTest(.router) { client in
+            try await client.XCTExecute(uri: "/", method: .GET, auth: .bearer("1234567890")) { response in
+                let body = try XCTUnwrap(response.body)
+                XCTAssertEqual(String(buffer: body), "1234567890")
+            }
+            try await client.XCTExecute(uri: "/", method: .GET, auth: .basic(username: "adam", password: "1234")) { response in
+                XCTAssertEqual(response.status, .noContent)
+            }
         }
     }
 
-    func testBasic() throws {
-        let app = HBApplication(testing: .embedded)
+    func testBasic() async throws {
+        let app = HBApplicationBuilder()
         app.router.get { request -> String? in
             return request.authBasic.map { "\($0.username):\($0.password)" }
         }
-        try app.XCTStart()
-        defer { app.XCTStop() }
-
-        try app.XCTExecute(uri: "/", method: .GET, auth: .basic(username: "adam", password: "password")) { response in
-            let body = try XCTUnwrap(response.body)
-            XCTAssertEqual(String(buffer: body), "adam:password")
+        try await app.buildAndTest(.router) { client in
+            try await client.XCTExecute(uri: "/", method: .GET, auth: .basic(username: "adam", password: "password")) { response in
+                let body = try XCTUnwrap(response.body)
+                XCTAssertEqual(String(buffer: body), "adam:password")
+            }
         }
     }
 
-    func testBcryptThread() throws {
-        let app = HBApplication(testing: .live)
-        app.addPersist(using: .memory)
+    func testBcryptThread() async throws {
+        let app = HBApplicationBuilder()
+        let persist = HBMemoryPersistDriver(eventLoopGroup: app.eventLoopGroup)
         app.router.put { request -> EventLoopFuture<HTTPResponseStatus> in
             guard let basic = request.authBasic else { return request.failure(.unauthorized) }
-            return Bcrypt.hash(basic.password, for: request).flatMap { hash in
-                request.persist.set(key: basic.username, value: hash)
-            }.map { _ in
-                .ok
+            return Bcrypt.hash(basic.password, for: request).flatMap { hash -> EventLoopFuture<Void> in
+                persist.set(key: basic.username, value: hash, expires: nil, request: request)
+            }.map {
+                HTTPResponseStatus.ok
             }
         }
         app.router.post { request -> EventLoopFuture<HTTPResponseStatus> in
             guard let basic = request.authBasic else { return request.failure(.unauthorized) }
-            return request.persist.get(key: basic.username, as: String.self).flatMap { hash in
+            return persist.get(key: basic.username, as: String.self, request: request).flatMap { hash in
                 guard let hash = hash else { return request.failure(.unauthorized) }
                 return Bcrypt.verify(basic.password, hash: hash, for: request)
             }.map { (result: Bool) in
@@ -102,22 +100,21 @@ final class AuthTests: XCTestCase {
                 }
             }
         }
-        try app.XCTStart()
-        defer { app.XCTStop() }
-
-        try app.XCTExecute(uri: "/", method: .PUT, auth: .basic(username: "testuser", password: "testpassword123")) { response in
-            XCTAssertEqual(response.status, .ok)
-        }
-        try app.XCTExecute(uri: "/", method: .POST, auth: .basic(username: "testuser", password: "testpassword123")) { response in
-            XCTAssertEqual(response.status, .ok)
+        try await app.buildAndTest(.router) { client in
+            try await client.XCTExecute(uri: "/", method: .PUT, auth: .basic(username: "testuser", password: "testpassword123")) { response in
+                XCTAssertEqual(response.status, .ok)
+            }
+            try await client.XCTExecute(uri: "/", method: .POST, auth: .basic(username: "testuser", password: "testpassword123")) { response in
+                XCTAssertEqual(response.status, .ok)
+            }
         }
     }
 
-    func testAuth() throws {
+    func testAuth() async throws {
         struct User: HBAuthenticatable {
             let name: String
         }
-        let app = HBApplication(testing: .embedded)
+        let app = HBApplicationBuilder()
         app.router.get { request -> HTTPResponseStatus in
             var request = request
             request.authLogin(User(name: "Test"))
@@ -129,15 +126,14 @@ final class AuthTests: XCTestCase {
             return .accepted
         }
 
-        try app.XCTStart()
-        defer { app.XCTStop() }
-
-        try app.XCTExecute(uri: "/", method: .GET) { response in
-            XCTAssertEqual(response.status, .accepted)
+        try await app.buildAndTest(.router) { client in
+            try await client.XCTExecute(uri: "/", method: .GET) { response in
+                XCTAssertEqual(response.status, .accepted)
+            }
         }
     }
 
-    func testLogin() throws {
+    func testLogin() async throws {
         struct User: HBAuthenticatable {
             let name: String
         }
@@ -147,22 +143,21 @@ final class AuthTests: XCTestCase {
             }
         }
 
-        let app = HBApplication(testing: .embedded)
+        let app = HBApplicationBuilder()
         app.middleware.add(HBTestAuthenticator())
         app.router.get { request -> HTTPResponseStatus in
             guard request.authHas(User.self) else { return .unauthorized }
             return .ok
         }
 
-        try app.XCTStart()
-        defer { app.XCTStop() }
-
-        try app.XCTExecute(uri: "/", method: .GET) { response in
-            XCTAssertEqual(response.status, .ok)
+        try await app.buildAndTest(.router) { client in
+            try await client.XCTExecute(uri: "/", method: .GET) { response in
+                XCTAssertEqual(response.status, .ok)
+            }
         }
     }
 
-    func testIsAuthenticatedMiddleware() throws {
+    func testIsAuthenticatedMiddleware() async throws {
         struct User: HBAuthenticatable {
             let name: String
         }
@@ -172,7 +167,7 @@ final class AuthTests: XCTestCase {
             }
         }
 
-        let app = HBApplication(testing: .embedded)
+        let app = HBApplicationBuilder()
         app.router.group()
             .add(middleware: HBTestAuthenticator())
             .add(middleware: IsAuthenticatedMiddleware(User.self))
@@ -185,52 +180,54 @@ final class AuthTests: XCTestCase {
                 return .ok
             }
 
-        try app.XCTStart()
-        defer { app.XCTStop() }
-
-        try app.XCTExecute(uri: "/authenticated", method: .GET) { response in
-            XCTAssertEqual(response.status, .ok)
-        }
-        try app.XCTExecute(uri: "/unauthenticated", method: .GET) { response in
-            XCTAssertEqual(response.status, .unauthorized)
+        try await app.buildAndTest(.router) { client in
+            try await client.XCTExecute(uri: "/authenticated", method: .GET) { response in
+                XCTAssertEqual(response.status, .ok)
+            }
+            try await client.XCTExecute(uri: "/unauthenticated", method: .GET) { response in
+                XCTAssertEqual(response.status, .unauthorized)
+            }
         }
     }
 
-    func testSessionAuthenticator() throws {
+    func testSessionAuthenticator() async throws {
         struct User: HBAuthenticatable {
             let name: String
         }
         struct MySessionAuthenticator: HBSessionAuthenticator {
+            let sessionStorage: HBSessionStorage
+
             func getValue(from session: Int, request: HBRequest) -> EventLoopFuture<User?> {
                 return request.success(.init(name: "Adam"))
             }
         }
-        let app = HBApplication(testing: .embedded)
+        let app = HBApplicationBuilder()
+        let persist = HBMemoryPersistDriver(eventLoopGroup: app.eventLoopGroup)
+        let sessions = HBSessionStorage(persist)
+
         app.router.put("session", options: .editResponse) { request -> EventLoopFuture<HTTPResponseStatus> in
-            return request.session.save(session: 1, expiresIn: .minutes(5)).map { _ in .ok }
+            return sessions.save(session: 1, expiresIn: .minutes(5), request: request).map { _ in .ok }
         }
         app.router.group()
-            .add(middleware: MySessionAuthenticator())
+            .add(middleware: MySessionAuthenticator(sessionStorage: sessions))
             .get("session") { request -> HTTPResponseStatus in
                 _ = try request.authRequire(User.self)
                 return .ok
             }
-        app.addSessions(using: .memory)
 
-        try app.XCTStart()
-        defer { app.XCTStop() }
-
-        let responseCookies = try app.XCTExecute(uri: "/session", method: .PUT) { response -> String? in
-            XCTAssertEqual(response.status, .ok)
-            return response.headers["Set-Cookie"].first
-        }
-        let cookies = try XCTUnwrap(responseCookies)
-        try app.XCTExecute(uri: "/session", method: .GET, headers: ["Cookie": cookies]) { response in
-            XCTAssertEqual(response.status, .ok)
+        try await app.buildAndTest(.router) { client in
+            let responseCookies = try await client.XCTExecute(uri: "/session", method: .PUT) { response -> String? in
+                XCTAssertEqual(response.status, .ok)
+                return response.headers["Set-Cookie"].first
+            }
+            let cookies = try XCTUnwrap(responseCookies)
+            try await client.XCTExecute(uri: "/session", method: .GET, headers: ["Cookie": cookies]) { response in
+                XCTAssertEqual(response.status, .ok)
+            }
         }
     }
 
-    func testAsyncAuthenticator() throws {
+    func testAsyncAuthenticator() async throws {
         struct User: HBAuthenticatable {
             let name: String
         }
@@ -240,22 +237,21 @@ final class AuthTests: XCTestCase {
             }
         }
 
-        let app = HBApplication(testing: .live)
+        let app = HBApplicationBuilder()
         app.middleware.add(HBTestAuthenticator())
         app.router.get { request -> HTTPResponseStatus in
             guard request.authHas(User.self) else { return .unauthorized }
             return .ok
         }
 
-        try app.XCTStart()
-        defer { app.XCTStop() }
-
-        try app.XCTExecute(uri: "/", method: .GET) { response in
-            XCTAssertEqual(response.status, .ok)
+        try await app.buildAndTest(.router) { client in
+            try await client.XCTExecute(uri: "/", method: .GET) { response in
+                XCTAssertEqual(response.status, .ok)
+            }
         }
     }
 
-    func testAsyncSessionAuthenticator() throws {
+    func testAsyncSessionAuthenticator() async throws {
         struct User: HBAuthenticatable {
             let name: String
         }
@@ -263,44 +259,47 @@ final class AuthTests: XCTestCase {
             typealias Session = UUID
             typealias Value = User
 
+            let sessionStorage: HBSessionStorage
+            let persist: HBMemoryPersistDriver
+
             func getValue(from session: UUID, request: HBRequest) async throws -> User? {
-                let name = try await request.persist.get(key: session.uuidString, as: String.self)
+                let name = try await persist.get(key: session.uuidString, as: String.self, request: request)
                 return name.map { .init(name: $0) }
             }
         }
-        let app = HBApplication(testing: .live)
+        let app = HBApplicationBuilder()
+        let persist = HBMemoryPersistDriver(eventLoopGroup: app.eventLoopGroup)
+        let sessions = HBSessionStorage(persist)
+
         app.router.put("session", options: .editResponse) { request -> HTTPResponseStatus in
             guard let basic = request.authBasic else { throw HBHTTPError(.unauthorized) }
             let session = UUID()
-            try await request.persist.create(key: session.uuidString, value: basic.username)
-            try await request.session.save(session: session, expiresIn: .minutes(5))
+            try await persist.create(key: session.uuidString, value: basic.username, request: request)
+            try await sessions.save(session: session, expiresIn: .minutes(5), request: request)
             return .ok
         }
         app.router.group()
-            .add(middleware: MySessionAuthenticator())
+            .add(middleware: MySessionAuthenticator(sessionStorage: sessions, persist: persist))
             .get("session") { request -> String in
                 let user = try request.authRequire(User.self)
                 return user.name
             }
-        app.addPersist(using: .memory)
-        app.addSessions()
 
-        try app.XCTStart()
-        defer { app.XCTStop() }
-
-        let responseCookies = try app.XCTExecute(
-            uri: "/session",
-            method: .PUT,
-            auth: .basic(username: "adam", password: "password123")
-        ) { response -> String? in
-            XCTAssertEqual(response.status, .ok)
-            return response.headers["Set-Cookie"].first
-        }
-        let cookies = try XCTUnwrap(responseCookies)
-        try app.XCTExecute(uri: "/session", method: .GET, headers: ["Cookie": cookies]) { response in
-            XCTAssertEqual(response.status, .ok)
-            let buffer = try XCTUnwrap(response.body)
-            XCTAssertEqual(String(buffer: buffer), "adam")
+        try await app.buildAndTest(.router) { client in
+            let responseCookies = try await client.XCTExecute(
+                uri: "/session",
+                method: .PUT,
+                auth: .basic(username: "adam", password: "password123")
+            ) { response -> String? in
+                XCTAssertEqual(response.status, .ok)
+                return response.headers["Set-Cookie"].first
+            }
+            let cookies = try XCTUnwrap(responseCookies)
+            try await client.XCTExecute(uri: "/session", method: .GET, headers: ["Cookie": cookies]) { response in
+                XCTAssertEqual(response.status, .ok)
+                let buffer = try XCTUnwrap(response.body)
+                XCTAssertEqual(String(buffer: buffer), "adam")
+            }
         }
     }
 }

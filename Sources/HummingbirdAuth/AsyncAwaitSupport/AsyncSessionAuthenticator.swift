@@ -20,30 +20,23 @@ public protocol HBAsyncSessionAuthenticator: HBAsyncAuthenticator {
     associatedtype Value = Value
     associatedtype Session: Codable
 
+    /// container for session objects
+    var sessionStorage: HBSessionStorage { get }
+
     /// Convert Session object into authenticated user
     /// - Parameters:
     ///   - from: session
     ///   - request: request being processed
     /// - Returns: optional authenticated user
     func getValue(from: Session, request: HBRequest) async throws -> Value?
-
-    /// Get Session object given request
-    /// - Parameters:
-    ///   - request: request being processed
-    /// - Returns: Future holding optional authenticated user
-    func getSession(request: HBRequest) async throws -> Session?
 }
 
 extension HBAsyncSessionAuthenticator {
     public func authenticate(request: HBRequest) async throws -> Value? {
-        let session: Session? = try await getSession(request: request)
+        let session: Session? = try await self.sessionStorage.load(request: request)
         guard let session = session else {
             return nil
         }
         return try await getValue(from: session, request: request)
-    }
-
-    public func getSession(request: HBRequest) async throws -> Session? {
-        return try await request.session.load()
     }
 }
