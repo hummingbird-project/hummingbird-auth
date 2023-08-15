@@ -71,7 +71,7 @@ public struct HBXCTAuthentication: Equatable {
     private let value: Internal
 }
 
-extension HBApplication {
+extension HBXCTClientProtocol {
     /// Send request with authentication and call test callback on the response returned
     ///
     /// - Parameters:
@@ -89,47 +89,14 @@ extension HBApplication {
         auth: HBXCTAuthentication,
         body: ByteBuffer? = nil,
         testCallback: @escaping (HBXCTResponse) throws -> Return
-    ) throws -> Return {
+    ) async throws -> Return {
         let request = auth.apply(uri: uri, method: method, headers: headers, body: body)
-        return try self.xct.execute(
+        return try await self.XCTExecute(
             uri: request.uri,
             method: request.method,
             headers: request.headers,
-            body: request.body
-        ).flatMapThrowing { response in
-            try testCallback(response)
-        }.wait()
-    }
-
-    /// Send request with authentication and call test callback on the response returned
-    ///
-    /// Although we have a generic version of this function that returns a generic value
-    /// we need to keep this version around for backwards compatibility
-    ///
-    /// - Parameters:
-    ///   - uri: URI to test
-    ///   - method: HTTP Method to test
-    ///   - headers: Request headers
-    ///   - auth: Authentication details
-    ///   - body: Request body
-    ///   - testCallback: Callback to test response
-    /// - Returns: Result of callback
-    public func XCTExecute(
-        uri: String,
-        method: HTTPMethod,
-        headers: HTTPHeaders = [:],
-        auth: HBXCTAuthentication,
-        body: ByteBuffer? = nil,
-        testCallback: @escaping (HBXCTResponse) throws -> Void
-    ) throws {
-        let request = auth.apply(uri: uri, method: method, headers: headers, body: body)
-        return try self.xct.execute(
-            uri: request.uri,
-            method: request.method,
-            headers: request.headers,
-            body: request.body
-        ).flatMapThrowing { response in
-            try testCallback(response)
-        }.wait()
+            body: request.body,
+            testCallback: testCallback
+        )
     }
 }
