@@ -2,7 +2,7 @@
 //
 // This source file is part of the Hummingbird server framework project
 //
-// Copyright (c) 2021-2021 the Hummingbird authors
+// Copyright (c) 2021-2023 the Hummingbird authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -16,7 +16,7 @@ import Hummingbird
 import NIOCore
 
 /// Protocol for objects that can be returned by an `HBAuthenticator`.
-public protocol HBAuthenticatable {}
+public protocol HBAuthenticatable: Sendable {}
 
 /// Middleware to check if a request is authenticated and then augment the request with
 /// authentication data.
@@ -51,27 +51,28 @@ public protocol HBAuthenticatable {}
 ///     }
 /// }
 /// ```
-public protocol HBAuthenticator: HBMiddleware {
+public protocol HBAuthenticator: HBMiddleware where Context: HBAuthRequestContextProtocol {
     /// type to be authenticated
     associatedtype Value: HBAuthenticatable
+    /// type to be authenticated
+    // associatedtype Context: HBAuthRequestContextProtocol
     /// Called by middleware to see if request is authenticated.
     ///
     /// Should return an authenticatable object if authenticated, return nil is not authenticated
     /// but want the request to be passed onto the next middleware or the router, or return a
     /// failed `EventLoopFuture` if the request should not proceed any further
-    func authenticate(request: HBRequest) -> EventLoopFuture<Value?>
+    func authenticate(request: HBRequest, context: Context) async throws -> Value?
 }
 
 extension HBAuthenticator {
     /// Calls `authenticate` and if it returns a valid autheniticatable object `login` with this object
-    public func apply(to request: HBRequest, next: HBResponder) -> EventLoopFuture<HBResponse> {
-        authenticate(request: request)
-            .flatMap { authenticated in
-                var request = request
-                if let authenticated = authenticated {
-                    request.authLogin(authenticated)
-                }
-                return next.respond(to: request)
-            }
+    public func apply(to request: HBRequest, context: Context, next: any HBResponder<Context>) async throws -> HBResponse {
+        if let authenticated = try await authenticate(request: request, context: context) {
+            var context = context
+            context.auth.login(authenticated)
+            return try await next.respond(to: request, context: context)
+        } else {
+            return try await next.respond(to: request, context: context)
+        }
     }
 }

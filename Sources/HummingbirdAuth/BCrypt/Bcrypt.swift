@@ -64,9 +64,9 @@ extension Bcrypt {
     /// The Bcrypt functions are designed to be slow to make them hard to crack. It is best not to run these functions
     /// on the EventLoop as this will block other requests using that EventLoop. You are better to run them on another
     /// thread.
-    public static func hash(_ text: String, cost: UInt8 = 12, for request: HBRequest) -> EventLoopFuture<String> {
-        request.applicationContext.threadPool.runIfActive(eventLoop: request.eventLoop) {
-            hash(text, cost: cost)
+    public static func hash<Context: HBRequestContext>(_ text: String, cost: UInt8 = 12, context: Context) async throws -> String {
+        try await context.applicationContext.threadPool.runIfActive {
+            self.hash(text, cost: cost)
         }
     }
 
@@ -75,9 +75,9 @@ extension Bcrypt {
     /// The Bcrypt functions are designed to be slow to make them hard to crack. It is best not to run these functions
     /// on the EventLoop as this will block other requests using that EventLoop. You are better to run them on another
     /// thread.
-    public static func verify(_ text: String, hash: String, for request: HBRequest) -> EventLoopFuture<Bool> {
-        request.applicationContext.threadPool.runIfActive(eventLoop: request.eventLoop) {
-            verify(text, hash: hash)
+    public static func verify<Context: HBRequestContext>(_ text: String, hash: String, context: Context) async throws -> Bool {
+        try await context.applicationContext.threadPool.runIfActive {
+            self.verify(text, hash: hash)
         }
     }
 }

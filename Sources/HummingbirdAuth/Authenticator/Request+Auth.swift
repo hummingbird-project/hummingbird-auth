@@ -11,54 +11,55 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 //===----------------------------------------------------------------------===//
+/*
+ import Hummingbird
 
-import Hummingbird
+ extension HBRequest {
+     /// Login with authenticatable object. Make object available to request via `Auth.get`
+     /// - Parameter auth: authentication details
+     public mutating func authLogin<Auth: HBAuthenticatable>(_ auth: Auth) {
+         if var cache = self.auth {
+             cache[ObjectIdentifier(Auth.self)] = auth
+             self.auth = cache
+         } else {
+             self.auth = [ObjectIdentifier(Auth.self): auth]
+         }
+     }
 
-extension HBRequest {
-    /// Login with authenticatable object. Make object available to request via `Auth.get`
-    /// - Parameter auth: authentication details
-    public mutating func authLogin<Auth: HBAuthenticatable>(_ auth: Auth) {
-        if var cache = self.loginCache {
-            cache[ObjectIdentifier(Auth.self)] = auth
-            self.loginCache = cache
-        } else {
-            self.loginCache = [ObjectIdentifier(Auth.self): auth]
-        }
-    }
+     /// Logout authenticatable object. Removes object from request
+     /// - Parameter auth: authentication type
+     public mutating func authLogout<Auth: HBAuthenticatable>(_: Auth.Type) {
+         if var cache = self.auth {
+             cache[ObjectIdentifier(Auth.self)] = nil
+             self.auth = cache
+         }
+     }
 
-    /// Logout authenticatable object. Removes object from request
-    /// - Parameter auth: authentication type
-    public mutating func authLogout<Auth: HBAuthenticatable>(_: Auth.Type) {
-        if var cache = self.loginCache {
-            cache[ObjectIdentifier(Auth.self)] = nil
-            self.loginCache = cache
-        }
-    }
+     /// Return authenticated type
+     /// - Parameter auth: Type required
+     public func authGet<Auth: HBAuthenticatable>(_: Auth.Type) -> Auth? {
+         return self.auth?[ObjectIdentifier(Auth.self)] as? Auth
+     }
 
-    /// Return authenticated type
-    /// - Parameter auth: Type required
-    public func authGet<Auth: HBAuthenticatable>(_: Auth.Type) -> Auth? {
-        return self.loginCache?[ObjectIdentifier(Auth.self)] as? Auth
-    }
+     /// Return authenticated type
+     /// - Parameter auth: Type required
+     public func authRequire<Auth: HBAuthenticatable>(_: Auth.Type) throws -> Auth {
+         guard let auth = self.auth?[ObjectIdentifier(Auth.self)] as? Auth else {
+             throw HBHTTPError(.unauthorized)
+         }
+         return auth
+     }
 
-    /// Return authenticated type
-    /// - Parameter auth: Type required
-    public func authRequire<Auth: HBAuthenticatable>(_: Auth.Type) throws -> Auth {
-        guard let auth = self.loginCache?[ObjectIdentifier(Auth.self)] as? Auth else {
-            throw HBHTTPError(.unauthorized)
-        }
-        return auth
-    }
+     /// Return if request is authenticated with type
+     /// - Parameter auth: Authentication type
+     public func authHas<Auth: HBAuthenticatable>(_: Auth.Type) -> Bool {
+         return self.auth?[ObjectIdentifier(Auth.self)] != nil
+     }
 
-    /// Return if request is authenticated with type
-    /// - Parameter auth: Authentication type
-    public func authHas<Auth: HBAuthenticatable>(_: Auth.Type) -> Bool {
-        return self.loginCache?[ObjectIdentifier(Auth.self)] != nil
-    }
-
-    /// cache of all the objects that have been logged in
-    var loginCache: [ObjectIdentifier: HBAuthenticatable]? {
-        get { self.extensions.get(\.loginCache) }
-        set { self.extensions.set(\.loginCache, value: newValue) }
-    }
-}
+     /// cache of all the objects that have been logged in
+     var auth: [ObjectIdentifier: HBAuthenticatable]? {
+         get { self.extensions.get(\.auth) }
+         set { self.extensions.set(\.auth, value: newValue) }
+     }
+ }
+ */
