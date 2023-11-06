@@ -29,18 +29,12 @@ public protocol HBSessionAuthenticator: HBAuthenticator {
     ///   - from: session
     ///   - request: request being processed
     /// - Returns: Future holding optional authenticated user
-    func getValue(from: Session, request: HBRequest) -> EventLoopFuture<Value?>
+    func getValue(from: Session, request: HBRequest, context: Context) async throws -> Value?
 }
 
 extension HBSessionAuthenticator {
-    public func authenticate(request: HBRequest) -> EventLoopFuture<Value?> {
-        return self.sessionStorage.load(request: request).flatMap { (session: Session?) in
-            // check if session exists.
-            guard let session = session else {
-                return request.success(nil)
-            }
-            // find authenticated user from session
-            return getValue(from: session, request: request)
-        }
+    public func authenticate(request: HBRequest, context: Context) async throws -> Value? {
+        guard let session: Session = try await self.sessionStorage.load(request: request) else { return nil }
+        return try await getValue(from: session, request: request, context: context)
     }
 }
