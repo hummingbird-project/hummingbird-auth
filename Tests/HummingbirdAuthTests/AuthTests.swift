@@ -52,7 +52,7 @@ final class AuthTests: XCTestCase {
     func testBearer() async throws {
         let router = HBRouterBuilder(context: HBTestAuthRouterContext.self)
         router.get { request, _ -> String? in
-            return request.authBearer?.token
+            return request.headers.bearer?.token
         }
         let app = HBApplication(responder: router.buildResponder())
         try await app.test(.router) { client in
@@ -69,7 +69,7 @@ final class AuthTests: XCTestCase {
     func testBasic() async throws {
         let router = HBRouterBuilder(context: HBTestAuthRouterContext.self)
         router.get { request, _ -> String? in
-            return request.authBasic.map { "\($0.username):\($0.password)" }
+            return request.headers.basic.map { "\($0.username):\($0.password)" }
         }
         let app = HBApplication(responder: router.buildResponder())
         try await app.test(.router) { client in
@@ -84,17 +84,17 @@ final class AuthTests: XCTestCase {
         let persist = HBMemoryPersistDriver()
         let router = HBRouterBuilder(context: HBTestAuthRouterContext.self)
         router.put { request, context -> HTTPResponseStatus in
-            guard let basic = request.authBasic else { throw HBHTTPError(.unauthorized) }
-            let hash = try await context.applicationContext.threadPool.runIfActive {
+            guard let basic = request.headers.basic else { throw HBHTTPError(.unauthorized) }
+            let hash = try await context.threadPool.runIfActive {
                 Bcrypt.hash(basic.password)
             }
             try await persist.set(key: basic.username, value: hash)
             return .ok
         }
         router.post { request, context -> HTTPResponseStatus in
-            guard let basic = request.authBasic else { throw HBHTTPError(.unauthorized) }
+            guard let basic = request.headers.basic else { throw HBHTTPError(.unauthorized) }
             guard let hash = try await persist.get(key: basic.username, as: String.self) else { throw HBHTTPError(.unauthorized) }
-            let verified = try await context.applicationContext.threadPool.runIfActive {
+            let verified = try await context.threadPool.runIfActive {
                 Bcrypt.verify(basic.password, hash: hash)
             }
             if verified {
