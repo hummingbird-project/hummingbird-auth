@@ -30,32 +30,30 @@ public protocol HBAuthenticatable: Sendable {}
 ///
 /// ```swift
 /// struct BasicAuthenticator: HBAuthenticator {
-///     func authenticate(request: HBRequest) -> EventLoopFuture<User?> {
+///     func authenticate<Context: HBAuthRequestContextProtocol>(request: HBRequest, context: Context) async throws -> User? {
 ///         // Basic authentication info in the "Authorization" header, is accessible
-///         // via request.auth.basic
-///         guard let basic = request.auth.basic else { return request.success(nil) }
+///         // via request.headers.basic
+///         guard let basic = request.headers.basic else { return nil }
 ///         // check if user exists in the database and then verify the entered password
 ///         // against the one stored in the database. If it is correct then login in user
-///         return database.getUserWithUsername(basic.username).map { user -> User? in
-///             // did we find a user
-///             guard let user = user else { return nil }
-///             // verify password against password hash stored in database. If valid
-///             // return the user. HummingbirdAuth provides an implementation of Bcrypt
+///         let user = try await database.getUserWithUsername(basic.username)
+///         // did we find a user
+///         guard let user = user else { return nil }
+///         // verify password against password hash stored in database. If valid
+///         // return the user. HummingbirdAuth provides an implementation of Bcrypt
+///         // This should be run on the thread pool as it is a long process.
+///         return try await context.threadPool.runIfActive {
 ///             if Bcrypt.verify(basic.password, hash: user.passwordHash) {
 ///                 return user
 ///             }
 ///             return nil
 ///         }
-///         // hop back to request eventloop
-///         .hop(to: request.eventLoop)
 ///     }
 /// }
 /// ```
 public protocol HBAuthenticator: HBMiddleware where Context: HBAuthRequestContextProtocol {
     /// type to be authenticated
     associatedtype Value: HBAuthenticatable
-    /// type to be authenticated
-    // associatedtype Context: HBAuthRequestContextProtocol
     /// Called by middleware to see if request is authenticated.
     ///
     /// Should return an authenticatable object if authenticated, return nil is not authenticated
