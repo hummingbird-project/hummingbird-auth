@@ -17,9 +17,9 @@ import HummingbirdXCT
 import Logging
 import NIOCore
 
-public struct HBTestAuthRouterContext: HBAuthRequestContextProtocol, HBTestRouterContextProtocol {
-    public init(applicationContext: HBApplicationContext, eventLoop: EventLoop, logger: Logger) {
-        self.coreContext = .init(applicationContext: applicationContext, eventLoop: eventLoop, logger: logger)
+public struct HBTestAuthRouterContext: HBAuthRequestContextProtocol, HBTestRequestContextProtocol {
+    public init(eventLoop: EventLoop, allocator: ByteBufferAllocator, logger: Logger) {
+        self.coreContext = .init(eventLoop: eventLoop, allocator: allocator, logger: logger)
         self.auth = .init()
     }
 

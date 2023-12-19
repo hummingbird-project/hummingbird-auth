@@ -40,11 +40,10 @@ public struct HBAuthRequestContext: HBAuthRequestContextProtocol, HBRemoteAddres
     ///   - channel: Channel that generated this request
     ///   - logger: Logger
     public init(
-        applicationContext: HBApplicationContext,
         channel: Channel,
         logger: Logger
     ) {
-        self.coreContext = .init(applicationContext: applicationContext, channel: channel, logger: logger)
+        self.coreContext = .init(eventLoop: channel.eventLoop, allocator: channel.allocator, logger: logger)
         self.channel = channel
         self.auth = .init()
     }
