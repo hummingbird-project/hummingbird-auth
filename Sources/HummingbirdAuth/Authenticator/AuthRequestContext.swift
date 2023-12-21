@@ -24,13 +24,9 @@ public protocol HBAuthRequestContextProtocol: HBRequestContext {
 }
 
 /// Implementation of a basic request context that supports everything the Hummingbird library needs
-public struct HBAuthRequestContext: HBAuthRequestContextProtocol, HBRemoteAddressRequestContext {
+public struct HBAuthRequestContext: HBAuthRequestContextProtocol {
     /// core context
     public var coreContext: HBCoreRequestContext
-    /// Channel context
-    let channel: Channel
-    /// Connected host address
-    public var remoteAddress: SocketAddress? { self.channel.remoteAddress }
     /// Login cache
     public var auth: HBLoginCache
 
@@ -40,11 +36,11 @@ public struct HBAuthRequestContext: HBAuthRequestContextProtocol, HBRemoteAddres
     ///   - channel: Channel that generated this request
     ///   - logger: Logger
     public init(
-        channel: Channel,
+        eventLoop: EventLoop,
+        allocator: ByteBufferAllocator,
         logger: Logger
     ) {
-        self.coreContext = .init(eventLoop: channel.eventLoop, allocator: channel.allocator, logger: logger)
-        self.channel = channel
+        self.coreContext = .init(eventLoop: eventLoop, allocator: allocator, logger: logger)
         self.auth = .init()
     }
 }

@@ -30,7 +30,7 @@ final class SessionTests: XCTestCase {
                 return User(name: "Adam")
             }
         }
-        let router = HBRouter(context: HBTestAuthRouterContext.self)
+        let router = HBRouter(context: HBAuthRequestContext.self)
         let persist = HBMemoryPersistDriver()
         let sessions = HBSessionStorage(persist)
         router.put("session") { _, _ -> HBResponse in
@@ -64,7 +64,7 @@ final class SessionTests: XCTestCase {
             let name: String
         }
 
-        let router = HBRouter(context: HBTestAuthRouterContext.self)
+        let router = HBRouter(context: HBAuthRequestContext.self)
         let persist = HBMemoryPersistDriver()
         let sessions = HBSessionStorage(persist)
         router.post("save") { request, _ -> HBResponse in
@@ -105,7 +105,7 @@ final class SessionTests: XCTestCase {
     }
 
     func testSessionUpdateError() async throws {
-        let router = HBRouter(context: HBTestAuthRouterContext.self)
+        let router = HBRouter(context: HBAuthRequestContext.self)
         let persist = HBMemoryPersistDriver()
         let sessions = HBSessionStorage(persist)
 
