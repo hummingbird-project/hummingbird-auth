@@ -34,29 +34,29 @@ public struct HBXCTAuthentication: Equatable {
         return .init(value: .cookie(name: name, value: value))
     }
 
-    func apply(uri: String, method: HTTPMethod, headers: HTTPHeaders, body: ByteBuffer?) -> (uri: String, method: HTTPMethod, headers: HTTPHeaders, body: ByteBuffer?) {
+    func apply(uri: String, method: HTTPRequest.Method, headers: HTTPFields, body: ByteBuffer?) -> (uri: String, method: HTTPRequest.Method, headers: HTTPFields, body: ByteBuffer?) {
         switch self.value {
         case .basic(let username, let password):
             var headers = headers
             let usernamePassword = "\(username):\(password)"
             let authorization = "Basic \(String(base64Encoding: usernamePassword.utf8))"
-            headers.replaceOrAdd(name: "authorization", value: authorization)
+            headers[.authorization] = authorization
             return (uri: uri, method: method, headers: headers, body: body)
 
         case .bearer(let token):
             var headers = headers
-            headers.replaceOrAdd(name: "authorization", value: "Bearer \(token)")
+            headers[.authorization] = "Bearer \(token)"
             return (uri: uri, method: method, headers: headers, body: body)
 
         case .cookie(let name, let value):
             var headers = headers
             let newCookie: String
-            if let cookie = headers["cookie"].first {
+            if let cookie = headers[.cookie] {
                 newCookie = "\(name)=\(value); \(cookie)"
             } else {
                 newCookie = "\(name)=\(value)"
             }
-            headers.replaceOrAdd(name: "cookie", value: newCookie)
+            headers[.cookie] = newCookie
             return (uri: uri, method: method, headers: headers, body: body)
         }
     }
@@ -84,8 +84,8 @@ extension HBXCTClientProtocol {
     /// - Returns: Result of callback
     public func XCTExecute<Return>(
         uri: String,
-        method: HTTPMethod,
-        headers: HTTPHeaders = [:],
+        method: HTTPRequest.Method,
+        headers: HTTPFields = [:],
         auth: HBXCTAuthentication,
         body: ByteBuffer? = nil,
         testCallback: @escaping (HBXCTResponse) throws -> Return

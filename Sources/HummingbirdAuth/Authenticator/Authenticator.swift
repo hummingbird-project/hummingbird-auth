@@ -51,7 +51,7 @@ public protocol HBAuthenticatable: Sendable {}
 ///     }
 /// }
 /// ```
-public protocol HBAuthenticator: HBMiddleware where Context: HBAuthRequestContextProtocol {
+public protocol HBAuthenticator: HBMiddlewareProtocol where Context: HBAuthRequestContextProtocol {
     /// type to be authenticated
     associatedtype Value: HBAuthenticatable
     /// Called by middleware to see if request is authenticated.
@@ -64,13 +64,13 @@ public protocol HBAuthenticator: HBMiddleware where Context: HBAuthRequestContex
 
 extension HBAuthenticator {
     /// Calls `authenticate` and if it returns a valid autheniticatable object `login` with this object
-    public func apply(to request: HBRequest, context: Context, next: any HBResponder<Context>) async throws -> HBResponse {
+    public func handle(_ request: HBRequest, context: Context, next: (HBRequest, Context) async throws -> HBResponse) async throws -> HBResponse {
         if let authenticated = try await authenticate(request: request, context: context) {
             var context = context
             context.auth.login(authenticated)
-            return try await next.respond(to: request, context: context)
+            return try await next(request, context)
         } else {
-            return try await next.respond(to: request, context: context)
+            return try await next(request, context)
         }
     }
 }

@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 import ExtrasBase64
+import HTTPTypes
 import Hummingbird
 
 /// Basic authentication information extracted from request header "Authorization"
@@ -21,11 +22,11 @@ public struct BasicAuthentication: Sendable {
     public let password: String
 }
 
-extension HTTPHeaders {
+extension HTTPFields {
     /// Return Basic (username/password) authorization information from request
     public var basic: BasicAuthentication? {
         // check for authorization header
-        guard let authorization = self["Authorization"].first else { return nil }
+        guard let authorization = self[.authorization] else { return nil }
         // check for basic prefix
         guard authorization.hasPrefix("Basic ") else { return nil }
         // extract base64 data

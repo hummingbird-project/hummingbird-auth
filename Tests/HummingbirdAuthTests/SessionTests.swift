@@ -30,7 +30,7 @@ final class SessionTests: XCTestCase {
                 return User(name: "Adam")
             }
         }
-        let router = HBRouterBuilder(context: HBTestAuthRouterContext.self)
+        let router = HBRouter(context: HBAuthRequestContext.self)
         let persist = HBMemoryPersistDriver()
         let sessions = HBSessionStorage(persist)
         router.put("session") { _, _ -> HBResponse in
@@ -41,19 +41,19 @@ final class SessionTests: XCTestCase {
         }
         router.group()
             .add(middleware: MySessionAuthenticator(sessionStorage: sessions))
-            .get("session") { _, context -> HTTPResponseStatus in
+            .get("session") { _, context -> HTTPResponse.Status in
                 _ = try context.auth.require(User.self)
                 return .ok
             }
         let app = HBApplication(responder: router.buildResponder())
 
         try await app.test(.router) { client in
-            let responseCookies = try await client.XCTExecute(uri: "/session", method: .PUT) { response -> String? in
+            let responseCookies = try await client.XCTExecute(uri: "/session", method: .put) { response -> String? in
                 XCTAssertEqual(response.status, .ok)
-                return response.headers["Set-Cookie"].first
+                return response.headers[.setCookie]
             }
             let cookies = try XCTUnwrap(responseCookies)
-            try await client.XCTExecute(uri: "/session", method: .GET, headers: ["Cookie": cookies]) { response in
+            try await client.XCTExecute(uri: "/session", method: .get, headers: [.cookie: cookies]) { response in
                 XCTAssertEqual(response.status, .ok)
             }
         }
@@ -64,7 +64,7 @@ final class SessionTests: XCTestCase {
             let name: String
         }
 
-        let router = HBRouterBuilder(context: HBTestAuthRouterContext.self)
+        let router = HBRouter(context: HBAuthRequestContext.self)
         let persist = HBMemoryPersistDriver()
         let sessions = HBSessionStorage(persist)
         router.post("save") { request, _ -> HBResponse in
@@ -74,7 +74,7 @@ final class SessionTests: XCTestCase {
             response.setCookie(cookie)
             return response
         }
-        router.post("update") { request, _ -> HTTPResponseStatus in
+        router.post("update") { request, _ -> HTTPResponse.Status in
             guard let name = request.uri.queryParameters.get("name") else { throw HBHTTPError(.badRequest) }
             try await sessions.update(session: User(name: name), expiresIn: .seconds(600), request: request)
             return .ok
@@ -86,17 +86,17 @@ final class SessionTests: XCTestCase {
         let app = HBApplication(responder: router.buildResponder())
 
         try await app.test(.router) { client in
-            let cookies = try await client.XCTExecute(uri: "/save?name=john", method: .POST) { response -> String? in
+            let cookies = try await client.XCTExecute(uri: "/save?name=john", method: .post) { response -> String? in
                 XCTAssertEqual(response.status, .ok)
-                return response.headers["Set-Cookie"].first
+                return response.headers[.setCookie]
             }
-            try await client.XCTExecute(uri: "/update?name=jane", method: .POST, headers: cookies.map { ["Cookie": $0] } ?? [:]) { response in
+            try await client.XCTExecute(uri: "/update?name=jane", method: .post, headers: cookies.map { [.cookie: $0] } ?? [:]) { response in
                 XCTAssertEqual(response.status, .ok)
-                XCTAssertNil(response.headers["Set-Cookie"].first)
+                XCTAssertNil(response.headers[.setCookie])
             }
 
             // get save username
-            try await client.XCTExecute(uri: "/name", method: .GET, headers: cookies.map { ["Cookie": $0] } ?? [:]) { response in
+            try await client.XCTExecute(uri: "/name", method: .get, headers: cookies.map { [.cookie: $0] } ?? [:]) { response in
                 XCTAssertEqual(response.status, .ok)
                 let buffer = try XCTUnwrap(response.body)
                 XCTAssertEqual(String(buffer: buffer), "jane")
@@ -105,11 +105,11 @@ final class SessionTests: XCTestCase {
     }
 
     func testSessionUpdateError() async throws {
-        let router = HBRouterBuilder(context: HBTestAuthRouterContext.self)
+        let router = HBRouter(context: HBAuthRequestContext.self)
         let persist = HBMemoryPersistDriver()
         let sessions = HBSessionStorage(persist)
 
-        router.post("update") { request, _ -> HTTPResponseStatus in
+        router.post("update") { request, _ -> HTTPResponse.Status in
             do {
                 try await sessions.update(session: "hello", expiresIn: .seconds(600), request: request)
                 return .ok
@@ -120,7 +120,7 @@ final class SessionTests: XCTestCase {
         let app = HBApplication(responder: router.buildResponder())
 
         try await app.test(.router) { client in
-            try await client.XCTExecute(uri: "/update", method: .POST) { response in
+            try await client.XCTExecute(uri: "/update", method: .post) { response in
                 XCTAssertEqual(response.status, .badRequest)
             }
         }
