@@ -36,11 +36,10 @@ public struct HBAuthRequestContext: HBAuthRequestContextProtocol {
     ///   - channel: Channel that generated this request
     ///   - logger: Logger
     public init(
-        eventLoop: EventLoop,
         allocator: ByteBufferAllocator,
         logger: Logger
     ) {
-        self.coreContext = .init(eventLoop: eventLoop, allocator: allocator, logger: logger)
+        self.coreContext = .init(allocator: allocator, logger: logger)
         self.auth = .init()
     }
 }
