@@ -18,15 +18,19 @@ import NIOCore
 /// Protocol for objects that can be returned by an `HBAuthenticator`.
 public protocol HBAuthenticatable: Sendable {}
 
-/// Middleware to check if a request is authenticated and then augment the request with
-/// authentication data.
+/// Protocol for a middleware that checks if a request is authenticated.
 ///
-/// Authenticators should conform to protocol `HBAuthenticator`. This requires you implement the function
-/// `authenticate(request: HBRequest) -> EventLoopFuture<Value?>` where `Value` is an
-/// object conforming to the protocol `HBAuthenticatable`.
+/// Requires an `authenticate` function that returns authentication data when successdul.
+/// If it is unsuccessful then nil should be returned so middleware further down the
+/// middleware chain can do authentication. If you don't want any further middleware to
+/// run then throw an error.
 ///
-/// A simple username, password authenticator could be implemented as follows. If the authenticator is successful
-/// it returns a `User` struct, otherwise it returns `nil`.
+/// To use an authenticator middleware it is required that your request context conform to
+/// ``HBAuthRequestContextProtocol`` so the middleware can attach authentication data to
+///  ``HBAuthRequestContextProtocol/auth``.
+///
+/// A simple username, password authenticator could be implemented as follows. If the
+/// authenticator is successful it returns a `User` struct, otherwise it returns `nil`.
 ///
 /// ```swift
 /// struct BasicAuthenticator: HBAuthenticator {
@@ -54,16 +58,16 @@ public protocol HBAuthenticatable: Sendable {}
 public protocol HBAuthenticator: HBMiddlewareProtocol where Context: HBAuthRequestContextProtocol {
     /// type to be authenticated
     associatedtype Value: HBAuthenticatable
-    /// Called by middleware to see if request is authenticated.
+    /// Called by middleware to see if request can authenticate.
     ///
     /// Should return an authenticatable object if authenticated, return nil is not authenticated
-    /// but want the request to be passed onto the next middleware or the router, or return a
-    /// failed `EventLoopFuture` if the request should not proceed any further
+    /// but want the request to be passed onto the next middleware or the router, or throw an error
+    ///  if the request should not proceed any further
     func authenticate(request: HBRequest, context: Context) async throws -> Value?
 }
 
 extension HBAuthenticator {
-    /// Calls `authenticate` and if it returns a valid autheniticatable object `login` with this object
+    /// Calls `authenticate` and if it returns a valid authenticatable object `login` with this object
     public func handle(_ request: HBRequest, context: Context, next: (HBRequest, Context) async throws -> HBResponse) async throws -> HBResponse {
         if let authenticated = try await authenticate(request: request, context: context) {
             var context = context
