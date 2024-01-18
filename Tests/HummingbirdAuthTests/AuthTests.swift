@@ -83,18 +83,18 @@ final class AuthTests: XCTestCase {
     func testBcryptThread() async throws {
         let persist = HBMemoryPersistDriver()
         let router = HBRouter(context: HBAuthRequestContext.self)
-        router.put { request, context -> HTTPResponse.Status in
+        router.put { request, _ -> HTTPResponse.Status in
             guard let basic = request.headers.basic else { throw HBHTTPError(.unauthorized) }
-            let hash = try await context.threadPool.runIfActive {
+            let hash = try await NIOThreadPool.singleton.runIfActive {
                 Bcrypt.hash(basic.password)
             }
             try await persist.set(key: basic.username, value: hash)
             return .ok
         }
-        router.post { request, context -> HTTPResponse.Status in
+        router.post { request, _ -> HTTPResponse.Status in
             guard let basic = request.headers.basic else { throw HBHTTPError(.unauthorized) }
             guard let hash = try await persist.get(key: basic.username, as: String.self) else { throw HBHTTPError(.unauthorized) }
-            let verified = try await context.threadPool.runIfActive {
+            let verified = try await NIOThreadPool.singleton.runIfActive {
                 Bcrypt.verify(basic.password, hash: hash)
             }
             if verified {
