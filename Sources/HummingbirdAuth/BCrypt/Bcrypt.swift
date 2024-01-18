@@ -23,6 +23,15 @@ import Hummingbird
 /// brute-force search attacks even with increasing computation power.
 public enum Bcrypt {
     /// Generate bcrypt hash from test
+    ///
+    /// The Bcrypt functions are designed to be slow to make them hard to crack. It is best not to run these functions
+    /// on the default Task executor as this will block other tasks from running. You are better to run them on another
+    /// thread e.g.
+    /// ```
+    /// try await NIOThreadPool.singleton.runIfActive {
+    ///     self.hash(text, cost: cost)
+    /// }
+    /// ```
     /// - Parameters:
     ///   - text: original text
     ///   - cost: log2 iterations of algorithm
@@ -51,34 +60,19 @@ public enum Bcrypt {
     }
 
     /// Verify text and hash match
+    ///
+    /// The Bcrypt functions are designed to be slow to make them hard to crack. It is best not to run these functions
+    /// on the default Task executor as this will block other tasks from running. You are better to run them on another
+    /// thread e.g.
+    /// ```
+    /// try await NIOThreadPool.singleton.runIfActive {
+    ///     self.hash(text, cost: cost)
+    /// }
+    /// ```
     /// - Parameters:
     ///   - text: plain text
     ///   - hash: hashed data
     public static func verify(_ text: String, hash: String) -> Bool {
         return c_hb_bcrypt_checkpass(text, hash) == 0
-    }
-}
-
-extension Bcrypt {
-    /// Run hash function on application thread pool
-    ///
-    /// The Bcrypt functions are designed to be slow to make them hard to crack. It is best not to run these functions
-    /// on the default Task executor as this will block other tasks from running. You are better to run them on another
-    /// thread.
-    public static func hash<Context: HBRequestContext>(_ text: String, cost: UInt8 = 12, context: Context) async throws -> String {
-        try await context.threadPool.runIfActive {
-            self.hash(text, cost: cost)
-        }
-    }
-
-    /// Run verify function on application thread pool
-    ///
-    /// The Bcrypt functions are designed to be slow to make them hard to crack. It is best not to run these functions
-    /// on the default Task executor as this will block other tasks from running. You are better to run them on another
-    /// thread.
-    public static func verify<Context: HBRequestContext>(_ text: String, hash: String, context: Context) async throws -> Bool {
-        try await context.threadPool.runIfActive {
-            self.verify(text, hash: hash)
-        }
     }
 }
