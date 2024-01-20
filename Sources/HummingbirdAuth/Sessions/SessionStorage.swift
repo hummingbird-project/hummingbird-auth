@@ -14,7 +14,6 @@
 
 import ExtrasBase64
 import Hummingbird
-import HummingbirdFoundation
 
 /// Stores session data
 public struct HBSessionStorage: Sendable {
