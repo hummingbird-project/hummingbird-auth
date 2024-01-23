@@ -42,10 +42,18 @@ public struct HBSessionStorage: Sendable {
 
     /// save new or exising session
     ///
-    /// Saving a new session will create a new session id and save that to the
-    /// response. Thus a route that uses `save` needs to have the `.editResponse`
-    /// option set. If you know the session already exists consider using
-    /// `update` instead.
+    /// Saving a new session will create a new session id and returns a cookie setting
+    /// the session id. You need to then return a response including this cookie. You
+    /// can either create an ``HBResponse`` directly or use ``HBEditedResponse`` to
+    /// generate the response from another type.
+    /// ```swift
+    /// let cookie = try await sessionStorage.save(session: session, expiresIn: .seconds(600))
+    /// var response = HBEditedResponse(response: responseGenerator)
+    /// response.setCookie(cookie)
+    /// return response
+    /// ```
+    /// If you know a session already exists it is preferable to use
+    /// ``HBSessionStorage/update(session:expiresIn:request:)``.
     public func save<Session: Codable>(session: Session, expiresIn: Duration) async throws -> HBCookie {
         let sessionId = Self.createSessionId()
         // prefix with "hbs."
