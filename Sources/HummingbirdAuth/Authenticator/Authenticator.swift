@@ -55,7 +55,7 @@ public protocol HBAuthenticatable: Sendable {}
 ///     }
 /// }
 /// ```
-public protocol HBAuthenticator: HBMiddlewareProtocol where Context: HBAuthRequestContextProtocol {
+public protocol HBAuthenticator: HBMiddlewareProtocol where Context: HBAuthRequestContext {
     /// type to be authenticated
     associatedtype Value: HBAuthenticatable
     /// Called by middleware to see if request can authenticate.

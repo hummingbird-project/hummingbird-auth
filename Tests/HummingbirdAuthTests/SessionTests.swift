@@ -24,13 +24,13 @@ final class SessionTests: XCTestCase {
         struct User: HBAuthenticatable {
             let name: String
         }
-        struct MySessionAuthenticator<Context: HBAuthRequestContextProtocol>: HBSessionAuthenticator {
+        struct MySessionAuthenticator<Context: HBAuthRequestContext>: HBSessionAuthenticator {
             let sessionStorage: HBSessionStorage
             func getValue(from session: Int, request: HBRequest, context: Context) async throws -> User? {
                 return User(name: "Adam")
             }
         }
-        let router = HBRouter(context: HBAuthRequestContext.self)
+        let router = HBRouter(context: HBBasicAuthRequestContext.self)
         let persist = HBMemoryPersistDriver()
         let sessions = HBSessionStorage(persist)
         router.put("session") { _, _ -> HBResponse in
@@ -64,7 +64,7 @@ final class SessionTests: XCTestCase {
             let name: String
         }
 
-        let router = HBRouter(context: HBAuthRequestContext.self)
+        let router = HBRouter(context: HBBasicAuthRequestContext.self)
         let persist = HBMemoryPersistDriver()
         let sessions = HBSessionStorage(persist)
         router.post("save") { request, _ -> HBResponse in
@@ -105,7 +105,7 @@ final class SessionTests: XCTestCase {
     }
 
     func testSessionUpdateError() async throws {
-        let router = HBRouter(context: HBAuthRequestContext.self)
+        let router = HBRouter(context: HBBasicAuthRequestContext.self)
         let persist = HBMemoryPersistDriver()
         let sessions = HBSessionStorage(persist)
 

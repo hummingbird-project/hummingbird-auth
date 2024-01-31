@@ -18,13 +18,13 @@ import NIOCore
 
 /// Protocol that all request contexts should conform to if they want to support
 /// authentication middleware
-public protocol HBAuthRequestContextProtocol: HBRequestContext {
+public protocol HBAuthRequestContext: HBRequestContext {
     /// Login cache
     var auth: HBLoginCache { get set }
 }
 
 /// Implementation of a basic request context that supports everything the Hummingbird library needs
-public struct HBAuthRequestContext: HBAuthRequestContextProtocol {
+public struct HBBasicAuthRequestContext: HBAuthRequestContext {
     /// core context
     public var coreContext: HBCoreRequestContext
     /// Login cache

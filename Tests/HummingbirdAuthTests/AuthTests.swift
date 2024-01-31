@@ -50,7 +50,7 @@ final class AuthTests: XCTestCase {
     }
 
     func testBearer() async throws {
-        let router = HBRouter(context: HBAuthRequestContext.self)
+        let router = HBRouter(context: HBBasicAuthRequestContext.self)
         router.get { request, _ -> String? in
             return request.headers.bearer?.token
         }
@@ -67,7 +67,7 @@ final class AuthTests: XCTestCase {
     }
 
     func testBasic() async throws {
-        let router = HBRouter(context: HBAuthRequestContext.self)
+        let router = HBRouter(context: HBBasicAuthRequestContext.self)
         router.get { request, _ -> String? in
             return request.headers.basic.map { "\($0.username):\($0.password)" }
         }
@@ -82,7 +82,7 @@ final class AuthTests: XCTestCase {
 
     func testBcryptThread() async throws {
         let persist = HBMemoryPersistDriver()
-        let router = HBRouter(context: HBAuthRequestContext.self)
+        let router = HBRouter(context: HBBasicAuthRequestContext.self)
         router.put { request, _ -> HTTPResponse.Status in
             guard let basic = request.headers.basic else { throw HBHTTPError(.unauthorized) }
             let hash = try await NIOThreadPool.singleton.runIfActive {
@@ -118,7 +118,7 @@ final class AuthTests: XCTestCase {
         struct User: HBAuthenticatable {
             let name: String
         }
-        let router = HBRouter(context: HBAuthRequestContext.self)
+        let router = HBRouter(context: HBBasicAuthRequestContext.self)
         router.get { _, context -> HTTPResponse.Status in
             var context = context
             context.auth.login(User(name: "Test"))
@@ -142,12 +142,12 @@ final class AuthTests: XCTestCase {
         struct User: HBAuthenticatable {
             let name: String
         }
-        struct HBTestAuthenticator<Context: HBAuthRequestContextProtocol>: HBAuthenticator {
+        struct HBTestAuthenticator<Context: HBAuthRequestContext>: HBAuthenticator {
             func authenticate(request: HBRequest, context: Context) async throws -> User? {
                 User(name: "Adam")
             }
         }
-        let router = HBRouter(context: HBAuthRequestContext.self)
+        let router = HBRouter(context: HBBasicAuthRequestContext.self)
         router.middlewares.add(HBTestAuthenticator())
         router.get { _, context -> HTTPResponse.Status in
             guard context.auth.has(User.self) else { return .unauthorized }
@@ -166,12 +166,12 @@ final class AuthTests: XCTestCase {
         struct User: HBAuthenticatable {
             let name: String
         }
-        struct HBTestAuthenticator<Context: HBAuthRequestContextProtocol>: HBAuthenticator {
+        struct HBTestAuthenticator<Context: HBAuthRequestContext>: HBAuthenticator {
             func authenticate(request: HBRequest, context: Context) async throws -> User? {
                 User(name: "Adam")
             }
         }
-        let router = HBRouter(context: HBAuthRequestContext.self)
+        let router = HBRouter(context: HBBasicAuthRequestContext.self)
         router.group()
             .add(middleware: HBTestAuthenticator())
             .add(middleware: IsAuthenticatedMiddleware(User.self))
@@ -199,14 +199,14 @@ final class AuthTests: XCTestCase {
         struct User: HBAuthenticatable {
             let name: String
         }
-        struct MySessionAuthenticator<Context: HBAuthRequestContextProtocol>: HBSessionAuthenticator {
+        struct MySessionAuthenticator<Context: HBAuthRequestContext>: HBSessionAuthenticator {
             let sessionStorage: HBSessionStorage
 
             func getValue(from session: Int, request: HBRequest, context: Context) async throws -> User? {
                 return User(name: "Adam")
             }
         }
-        let router = HBRouter(context: HBAuthRequestContext.self)
+        let router = HBRouter(context: HBBasicAuthRequestContext.self)
         let persist = HBMemoryPersistDriver()
         let sessions = HBSessionStorage(persist)
 
