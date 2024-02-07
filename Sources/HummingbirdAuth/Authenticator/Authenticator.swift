@@ -26,15 +26,15 @@ public protocol HBAuthenticatable: Sendable {}
 /// run then throw an error.
 ///
 /// To use an authenticator middleware it is required that your request context conform to
-/// ``HBAuthRequestContextProtocol`` so the middleware can attach authentication data to
-///  ``HBAuthRequestContextProtocol/auth``.
+/// ``HBAuthRequestContext`` so the middleware can attach authentication data to
+///  ``HBAuthRequestContext/auth``.
 ///
 /// A simple username, password authenticator could be implemented as follows. If the
 /// authenticator is successful it returns a `User` struct, otherwise it returns `nil`.
 ///
 /// ```swift
 /// struct BasicAuthenticator: HBAuthenticator {
-///     func authenticate<Context: HBAuthRequestContextProtocol>(request: HBRequest, context: Context) async throws -> User? {
+///     func authenticate<Context: HBAuthRequestContext>(request: HBRequest, context: Context) async throws -> User? {
 ///         // Basic authentication info in the "Authorization" header, is accessible
 ///         // via request.headers.basic
 ///         guard let basic = request.headers.basic else { return nil }

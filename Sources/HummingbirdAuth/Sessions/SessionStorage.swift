@@ -44,7 +44,7 @@ public struct HBSessionStorage: Sendable {
     ///
     /// Saving a new session will create a new session id and returns a cookie setting
     /// the session id. You need to then return a response including this cookie. You
-    /// can either create an ``HBResponse`` directly or use ``HBEditedResponse`` to
+    /// can either create an ``HummingbirdCore/HBResponse`` directly or use ``Hummingbird/HBEditedResponse`` to
     /// generate the response from another type.
     /// ```swift
     /// let cookie = try await sessionStorage.save(session: session, expiresIn: .seconds(600))
