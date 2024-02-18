@@ -54,7 +54,7 @@ public struct HBSessionStorage: Sendable {
     /// ```
     /// If you know a session already exists it is preferable to use
     /// ``HBSessionStorage/update(session:expiresIn:request:)``.
-    public func save<Session: Codable>(session: Session, expiresIn: Duration) async throws -> HBCookie {
+    public func save(session: some Codable, expiresIn: Duration) async throws -> HBCookie {
         let sessionId = Self.createSessionId()
         // prefix with "hbs."
         try await self.storage.set(
@@ -68,7 +68,7 @@ public struct HBSessionStorage: Sendable {
     /// update existing session
     ///
     /// If session does not exist then a `sessionDoesNotExist` error will be thrown
-    public func update<Session: Codable>(session: Session, expiresIn: Duration, request: HBRequest) async throws {
+    public func update(session: some Codable, expiresIn: Duration, request: HBRequest) async throws {
         guard let sessionId = self.getId(request: request) else {
             throw Error.sessionDoesNotExist
         }
