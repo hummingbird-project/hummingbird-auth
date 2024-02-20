@@ -35,11 +35,8 @@ public struct HBBasicAuthRequestContext: HBAuthRequestContext {
     ///   - applicationContext: Context from Application that instigated the request
     ///   - channel: Channel that generated this request
     ///   - logger: Logger
-    public init(
-        allocator: ByteBufferAllocator,
-        logger: Logger
-    ) {
-        self.coreContext = .init(allocator: allocator, logger: logger)
+    public init(channel: Channel, logger: Logger) {
+        self.coreContext = .init(allocator: channel.allocator, logger: logger)
         self.auth = .init()
     }
 }
