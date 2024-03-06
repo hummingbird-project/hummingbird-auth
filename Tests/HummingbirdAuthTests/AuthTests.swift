@@ -14,8 +14,8 @@
 
 import Hummingbird
 import HummingbirdAuth
-import HummingbirdAuthXCT
-import HummingbirdXCT
+import HummingbirdAuthTesting
+import HummingbirdTesting
 import NIOPosix
 import XCTest
 
@@ -56,11 +56,11 @@ final class AuthTests: XCTestCase {
         }
         let app = HBApplication(responder: router.buildResponder())
         try await app.test(.router) { client in
-            try await client.XCTExecute(uri: "/", method: .get, auth: .bearer("1234567890")) { response in
+            try await client.execute(uri: "/", method: .get, auth: .bearer("1234567890")) { response in
                 let body = try XCTUnwrap(response.body)
                 XCTAssertEqual(String(buffer: body), "1234567890")
             }
-            try await client.XCTExecute(uri: "/", method: .get, auth: .basic(username: "adam", password: "1234")) { response in
+            try await client.execute(uri: "/", method: .get, auth: .basic(username: "adam", password: "1234")) { response in
                 XCTAssertEqual(response.status, .noContent)
             }
         }
@@ -73,7 +73,7 @@ final class AuthTests: XCTestCase {
         }
         let app = HBApplication(responder: router.buildResponder())
         try await app.test(.router) { client in
-            try await client.XCTExecute(uri: "/", method: .get, auth: .basic(username: "adam", password: "password")) { response in
+            try await client.execute(uri: "/", method: .get, auth: .basic(username: "adam", password: "password")) { response in
                 let body = try XCTUnwrap(response.body)
                 XCTAssertEqual(String(buffer: body), "adam:password")
             }
@@ -105,10 +105,10 @@ final class AuthTests: XCTestCase {
         }
         let app = HBApplication(responder: router.buildResponder())
         try await app.test(.router) { client in
-            try await client.XCTExecute(uri: "/", method: .put, auth: .basic(username: "testuser", password: "testpassword123")) { response in
+            try await client.execute(uri: "/", method: .put, auth: .basic(username: "testuser", password: "testpassword123")) { response in
                 XCTAssertEqual(response.status, .ok)
             }
-            try await client.XCTExecute(uri: "/", method: .post, auth: .basic(username: "testuser", password: "testpassword123")) { response in
+            try await client.execute(uri: "/", method: .post, auth: .basic(username: "testuser", password: "testpassword123")) { response in
                 XCTAssertEqual(response.status, .ok)
             }
         }
@@ -132,7 +132,7 @@ final class AuthTests: XCTestCase {
         let app = HBApplication(responder: router.buildResponder())
 
         try await app.test(.router) { client in
-            try await client.XCTExecute(uri: "/", method: .get) { response in
+            try await client.execute(uri: "/", method: .get) { response in
                 XCTAssertEqual(response.status, .accepted)
             }
         }
@@ -156,7 +156,7 @@ final class AuthTests: XCTestCase {
         let app = HBApplication(responder: router.buildResponder())
 
         try await app.test(.router) { client in
-            try await client.XCTExecute(uri: "/", method: .get) { response in
+            try await client.execute(uri: "/", method: .get) { response in
                 XCTAssertEqual(response.status, .ok)
             }
         }
@@ -186,10 +186,10 @@ final class AuthTests: XCTestCase {
         let app = HBApplication(responder: router.buildResponder())
 
         try await app.test(.router) { client in
-            try await client.XCTExecute(uri: "/authenticated", method: .get) { response in
+            try await client.execute(uri: "/authenticated", method: .get) { response in
                 XCTAssertEqual(response.status, .ok)
             }
-            try await client.XCTExecute(uri: "/unauthenticated", method: .get) { response in
+            try await client.execute(uri: "/unauthenticated", method: .get) { response in
                 XCTAssertEqual(response.status, .unauthorized)
             }
         }
@@ -225,12 +225,12 @@ final class AuthTests: XCTestCase {
         let app = HBApplication(responder: router.buildResponder())
 
         try await app.test(.router) { client in
-            let responseCookies = try await client.XCTExecute(uri: "/session", method: .put) { response -> String? in
+            let responseCookies = try await client.execute(uri: "/session", method: .put) { response -> String? in
                 XCTAssertEqual(response.status, .ok)
                 return response.headers[.setCookie]
             }
             let cookies = try XCTUnwrap(responseCookies)
-            try await client.XCTExecute(uri: "/session", method: .get, headers: [.cookie: cookies]) { response in
+            try await client.execute(uri: "/session", method: .get, headers: [.cookie: cookies]) { response in
                 XCTAssertEqual(response.status, .ok)
             }
         }

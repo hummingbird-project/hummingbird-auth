@@ -14,8 +14,8 @@
 
 import Hummingbird
 import HummingbirdAuth
-import HummingbirdAuthXCT
-import HummingbirdXCT
+import HummingbirdAuthTesting
+import HummingbirdTesting
 import NIOPosix
 import XCTest
 
@@ -48,12 +48,12 @@ final class SessionTests: XCTestCase {
         let app = HBApplication(responder: router.buildResponder())
 
         try await app.test(.router) { client in
-            let responseCookies = try await client.XCTExecute(uri: "/session", method: .put) { response -> String? in
+            let responseCookies = try await client.execute(uri: "/session", method: .put) { response -> String? in
                 XCTAssertEqual(response.status, .ok)
                 return response.headers[.setCookie]
             }
             let cookies = try XCTUnwrap(responseCookies)
-            try await client.XCTExecute(uri: "/session", method: .get, headers: [.cookie: cookies]) { response in
+            try await client.execute(uri: "/session", method: .get, headers: [.cookie: cookies]) { response in
                 XCTAssertEqual(response.status, .ok)
             }
         }
@@ -86,17 +86,17 @@ final class SessionTests: XCTestCase {
         let app = HBApplication(responder: router.buildResponder())
 
         try await app.test(.router) { client in
-            let cookies = try await client.XCTExecute(uri: "/save?name=john", method: .post) { response -> String? in
+            let cookies = try await client.execute(uri: "/save?name=john", method: .post) { response -> String? in
                 XCTAssertEqual(response.status, .ok)
                 return response.headers[.setCookie]
             }
-            try await client.XCTExecute(uri: "/update?name=jane", method: .post, headers: cookies.map { [.cookie: $0] } ?? [:]) { response in
+            try await client.execute(uri: "/update?name=jane", method: .post, headers: cookies.map { [.cookie: $0] } ?? [:]) { response in
                 XCTAssertEqual(response.status, .ok)
                 XCTAssertNil(response.headers[.setCookie])
             }
 
             // get save username
-            try await client.XCTExecute(uri: "/name", method: .get, headers: cookies.map { [.cookie: $0] } ?? [:]) { response in
+            try await client.execute(uri: "/name", method: .get, headers: cookies.map { [.cookie: $0] } ?? [:]) { response in
                 XCTAssertEqual(response.status, .ok)
                 let buffer = try XCTUnwrap(response.body)
                 XCTAssertEqual(String(buffer: buffer), "jane")
@@ -120,7 +120,7 @@ final class SessionTests: XCTestCase {
         let app = HBApplication(responder: router.buildResponder())
 
         try await app.test(.router) { client in
-            try await client.XCTExecute(uri: "/update", method: .post) { response in
+            try await client.execute(uri: "/update", method: .post) { response in
                 XCTAssertEqual(response.status, .badRequest)
             }
         }
