@@ -17,7 +17,7 @@ import Hummingbird
 import HummingbirdTesting
 import XCTest
 
-/// Used to generate various authentication types for XCT tests
+/// Used to generate various authentication types for Testing framework
 public struct HBTestAuthentication: Equatable {
     /// create basic authentication test
     public static func basic(username: String, password: String) -> Self {
