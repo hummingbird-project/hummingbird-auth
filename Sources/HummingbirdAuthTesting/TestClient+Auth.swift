@@ -14,11 +14,11 @@
 
 import ExtrasBase64
 import Hummingbird
-import HummingbirdXCT
+import HummingbirdTesting
 import XCTest
 
-/// Used to generate various authentication types for XCT tests
-public struct HBXCTAuthentication: Equatable {
+/// Used to generate various authentication types for Testing framework
+public struct HBTestAuthentication: Equatable {
     /// create basic authentication test
     public static func basic(username: String, password: String) -> Self {
         return .init(value: .basic(username: username, password: password))
@@ -34,29 +34,29 @@ public struct HBXCTAuthentication: Equatable {
         return .init(value: .cookie(name: name, value: value))
     }
 
-    func apply(uri: String, method: HTTPMethod, headers: HTTPHeaders, body: ByteBuffer?) -> (uri: String, method: HTTPMethod, headers: HTTPHeaders, body: ByteBuffer?) {
+    func apply(uri: String, method: HTTPRequest.Method, headers: HTTPFields, body: ByteBuffer?) -> (uri: String, method: HTTPRequest.Method, headers: HTTPFields, body: ByteBuffer?) {
         switch self.value {
         case .basic(let username, let password):
             var headers = headers
             let usernamePassword = "\(username):\(password)"
             let authorization = "Basic \(String(base64Encoding: usernamePassword.utf8))"
-            headers.replaceOrAdd(name: "authorization", value: authorization)
+            headers[.authorization] = authorization
             return (uri: uri, method: method, headers: headers, body: body)
 
         case .bearer(let token):
             var headers = headers
-            headers.replaceOrAdd(name: "authorization", value: "Bearer \(token)")
+            headers[.authorization] = "Bearer \(token)"
             return (uri: uri, method: method, headers: headers, body: body)
 
         case .cookie(let name, let value):
             var headers = headers
             let newCookie: String
-            if let cookie = headers["cookie"].first {
+            if let cookie = headers[.cookie] {
                 newCookie = "\(name)=\(value); \(cookie)"
             } else {
                 newCookie = "\(name)=\(value)"
             }
-            headers.replaceOrAdd(name: "cookie", value: newCookie)
+            headers[.cookie] = newCookie
             return (uri: uri, method: method, headers: headers, body: body)
         }
     }
@@ -71,7 +71,7 @@ public struct HBXCTAuthentication: Equatable {
     private let value: Internal
 }
 
-extension HBApplication {
+extension HBTestClientProtocol {
     /// Send request with authentication and call test callback on the response returned
     ///
     /// - Parameters:
@@ -82,54 +82,21 @@ extension HBApplication {
     ///   - body: Request body
     ///   - testCallback: Callback to test response
     /// - Returns: Result of callback
-    public func XCTExecute<Return>(
+    public func execute<Return>(
         uri: String,
-        method: HTTPMethod,
-        headers: HTTPHeaders = [:],
-        auth: HBXCTAuthentication,
+        method: HTTPRequest.Method,
+        headers: HTTPFields = [:],
+        auth: HBTestAuthentication,
         body: ByteBuffer? = nil,
-        testCallback: @escaping (HBXCTResponse) throws -> Return
-    ) throws -> Return {
+        testCallback: @escaping (HBTestResponse) throws -> Return
+    ) async throws -> Return {
         let request = auth.apply(uri: uri, method: method, headers: headers, body: body)
-        return try self.xct.execute(
+        return try await self.execute(
             uri: request.uri,
             method: request.method,
             headers: request.headers,
-            body: request.body
-        ).flatMapThrowing { response in
-            try testCallback(response)
-        }.wait()
-    }
-
-    /// Send request with authentication and call test callback on the response returned
-    ///
-    /// Although we have a generic version of this function that returns a generic value
-    /// we need to keep this version around for backwards compatibility
-    ///
-    /// - Parameters:
-    ///   - uri: URI to test
-    ///   - method: HTTP Method to test
-    ///   - headers: Request headers
-    ///   - auth: Authentication details
-    ///   - body: Request body
-    ///   - testCallback: Callback to test response
-    /// - Returns: Result of callback
-    public func XCTExecute(
-        uri: String,
-        method: HTTPMethod,
-        headers: HTTPHeaders = [:],
-        auth: HBXCTAuthentication,
-        body: ByteBuffer? = nil,
-        testCallback: @escaping (HBXCTResponse) throws -> Void
-    ) throws {
-        let request = auth.apply(uri: uri, method: method, headers: headers, body: body)
-        return try self.xct.execute(
-            uri: request.uri,
-            method: request.method,
-            headers: request.headers,
-            body: request.body
-        ).flatMapThrowing { response in
-            try testCallback(response)
-        }.wait()
+            body: request.body,
+            testCallback: testCallback
+        )
     }
 }

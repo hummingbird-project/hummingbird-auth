@@ -14,7 +14,7 @@
 
 import Hummingbird
 import HummingbirdAuth
-import HummingbirdXCT
+import HummingbirdTesting
 import XCTest
 
 final class OTPTests: XCTestCase {

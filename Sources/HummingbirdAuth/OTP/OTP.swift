@@ -53,7 +53,7 @@ extension OTP {
         let label = label.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? label
         let issuer = issuer?.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? issuer
         var url = "otpauth://\(algorithmName)/\(label)?secret=\(base32)"
-        if let issuer = issuer {
+        if let issuer {
             url += "&issuer=\(issuer)"
         }
         url += parameters
@@ -217,7 +217,7 @@ extension FixedWidthInteger {
     }
 }
 
-extension Array where Element == UInt8 {
+extension Array<UInt8> {
     /// Construct Array of UInt8 by copying memory
     init(_ bytes: UnsafeRawPointer, count: Int) {
         self.init(unsafeUninitializedCapacity: count) { buffer, c in

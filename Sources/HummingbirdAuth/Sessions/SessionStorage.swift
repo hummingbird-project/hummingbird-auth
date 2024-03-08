@@ -14,7 +14,6 @@
 
 import ExtrasBase64
 import Hummingbird
-import HummingbirdFoundation
 
 /// Stores session data
 public struct HBSessionStorage: Sendable {
@@ -33,98 +32,91 @@ public struct HBSessionStorage: Sendable {
         public static var sessionDoesNotExist: Self { .init(.sessionDoesNotExist) }
     }
 
-    let sessionID: SessionIDStorage
-
-    // enum defining where to store a session id
-    public enum SessionIDStorage: Sendable {
-        case cookie(String)
-        case header(String)
-    }
+    let sessionCookie: String
 
     /// Initialize session storage
-    public init(_ storage: HBPersistDriver, sessionID: SessionIDStorage = .cookie("SESSION_ID")) {
-        self.storage = .init(storage)
-        self.sessionID = sessionID
+    public init(_ storage: any HBPersistDriver, sessionCookie: String = "SESSION_ID") {
+        self.storage = storage
+        self.sessionCookie = sessionCookie
     }
 
     /// save new or exising session
     ///
-    /// Saving a new session will create a new session id and save that to the
-    /// response. Thus a route that uses `save` needs to have the `.editResponse`
-    /// option set. If you know the session already exists consider using
-    /// `update` instead.
-    public func save<Session: Codable>(session: Session, expiresIn: TimeAmount, request: HBRequest) -> EventLoopFuture<Void> {
-        let sessionId = self.getId(request: request) ?? Self.createSessionId()
+    /// Saving a new session will create a new session id and returns a cookie setting
+    /// the session id. You need to then return a response including this cookie. You
+    /// can either create an ``HummingbirdCore/HBResponse`` directly or use ``Hummingbird/HBEditedResponse`` to
+    /// generate the response from another type.
+    /// ```swift
+    /// let cookie = try await sessionStorage.save(session: session, expiresIn: .seconds(600))
+    /// var response = HBEditedResponse(response: responseGenerator)
+    /// response.setCookie(cookie)
+    /// return response
+    /// ```
+    /// If you know a session already exists it is preferable to use
+    /// ``HBSessionStorage/update(session:expiresIn:request:)``.
+    public func save(session: some Codable, expiresIn: Duration) async throws -> HBCookie {
+        let sessionId = Self.createSessionId()
         // prefix with "hbs."
-        return self.storage.wrappedValue.set(
+        try await self.storage.set(
             key: "hbs.\(sessionId)",
             value: session,
-            expires: expiresIn,
-            request: request
-        ).map { _ in self.setId(sessionId, request: request) }
+            expires: expiresIn
+        )
+        return .init(name: self.sessionCookie, value: sessionId, path: "/")
     }
 
     /// update existing session
     ///
-    /// If session does not exist then this function will do nothing
-    public func update<Session: Codable>(session: Session, expiresIn: TimeAmount, request: HBRequest) -> EventLoopFuture<Void> {
+    /// If session does not exist then a `sessionDoesNotExist` error will be thrown
+    public func update(session: some Codable, expiresIn: Duration, request: HBRequest) async throws {
         guard let sessionId = self.getId(request: request) else {
-            return request.failure(Error.sessionDoesNotExist)
+            throw Error.sessionDoesNotExist
         }
         // prefix with "hbs."
-        return self.storage.wrappedValue.set(
+        try await self.storage.set(
             key: "hbs.\(sessionId)",
             value: session,
-            expires: expiresIn,
-            request: request
+            expires: expiresIn
         )
     }
 
     /// load session
-    public func load<Session: Codable>(as: Session.Type = Session.self, request: HBRequest) -> EventLoopFuture<Session?> {
-        guard let sessionId = getId(request: request) else { return request.success(nil) }
+    public func load<Session: Codable>(as: Session.Type = Session.self, request: HBRequest) async throws -> Session? {
+        guard let sessionId = getId(request: request) else { return nil }
         // prefix with "hbs."
-        return self.storage.wrappedValue.get(
+        return try await self.storage.get(
             key: "hbs.\(sessionId)",
-            as: Session.self,
-            request: request
+            as: Session.self
         )
     }
 
     /// delete session
-    public func delete(request: HBRequest) -> EventLoopFuture<Void> {
-        guard let sessionId = getId(request: request) else { return request.success(()) }
+    public func delete(request: HBRequest) async throws {
+        guard let sessionId = getId(request: request) else { return }
         // prefix with "hbs."
-        return self.storage.wrappedValue.remove(
-            key: "hbs.\(sessionId)",
-            request: request
+        return try await self.storage.remove(
+            key: "hbs.\(sessionId)"
         )
     }
 
     /// Get session id gets id from request
     func getId(request: HBRequest) -> String? {
-        switch self.sessionID {
-        case .cookie(let cookie):
-            guard let sessionCookie = request.cookies[cookie]?.value else { return nil }
-            return String(sessionCookie)
-        case .header(let header):
-            guard let sessionHeader = request.headers[header].first else { return nil }
-            return sessionHeader
-        }
+        guard let sessionCookie = request.cookies[self.sessionCookie]?.value else { return nil }
+        return String(sessionCookie)
     }
 
     /// set session id on response
     func setId(_ id: String, request: HBRequest) {
-        precondition(
-            request.extensions.get(\.response) != nil,
-            "Saving a session involves editing the response via HBRequest.response which cannot be done outside of a route without the .editResponse option set"
-        )
-        switch self.sessionID {
-        case .cookie(let cookie):
-            request.response.setCookie(.init(name: cookie, value: id, path: "/"))
-        case .header(let header):
-            request.response.headers.replaceOrAdd(name: header, value: id)
-        }
+        /* precondition(
+             request.extensions.get(\.response) != nil,
+             "Saving a session involves editing the response via HBRequest.response which cannot be done outside of a route without the .editResponse option set"
+         )
+                 switch self.sessionID {
+          case .cookie(let cookie):
+              request.response.setCookie(.init(name: cookie, value: id, path: "/"))
+          case .header(let header):
+              request.response.headers.replaceOrAdd(name: header, value: id)
+          } */
     }
 
     /// create a session id
@@ -136,62 +128,5 @@ public struct HBSessionStorage: Sendable {
     // This is wrapped in an unsafe storage wrapper because I cannot conform `HBPersistDriver`
     // to `Sendable` at this point because Redis and Fluent types do not currently conform to
     // `Sendable` when it should be possible for this to be the case.
-    let storage: HBUnsafeTransfer<HBPersistDriver>
-}
-
-extension HBSessionStorage {
-    /// save new or exising session
-    ///
-    /// Saving a new session will create a new session id and save that to the
-    /// response. Thus a route that uses `save` needs to have the `.editResponse`
-    /// option set. If you know the session already exists consider using
-    /// `update` instead.
-    public func save<Session: Codable>(session: Session, expiresIn: TimeAmount, request: HBRequest) async throws {
-        let sessionId = Self.createSessionId()
-        // prefix with "hbs."
-        try await self.storage.wrappedValue.set(
-            key: "hbs.\(sessionId)",
-            value: session,
-            expires: expiresIn,
-            request: request
-        ).get()
-        self.setId(sessionId, request: request)
-    }
-
-    /// update existing session
-    ///
-    /// If session does not exist then a `sessionDoesNotExist` error will be thrown
-    public func update<Session: Codable>(session: Session, expiresIn: TimeAmount, request: HBRequest) async throws {
-        guard let sessionId = self.getId(request: request) else {
-            throw Error.sessionDoesNotExist
-        }
-        // prefix with "hbs."
-        try await self.storage.wrappedValue.set(
-            key: "hbs.\(sessionId)",
-            value: session,
-            expires: expiresIn,
-            request: request
-        ).get()
-    }
-
-    /// load session
-    public func load<Session: Codable>(as: Session.Type = Session.self, request: HBRequest) async throws -> Session? {
-        guard let sessionId = getId(request: request) else { return nil }
-        // prefix with "hbs."
-        return try await self.storage.wrappedValue.get(
-            key: "hbs.\(sessionId)",
-            as: Session.self,
-            request: request
-        ).get()
-    }
-
-    /// delete session
-    public func delete(request: HBRequest) async throws {
-        guard let sessionId = getId(request: request) else { return }
-        // prefix with "hbs."
-        return try await self.storage.wrappedValue.remove(
-            key: "hbs.\(sessionId)",
-            request: request
-        ).get()
-    }
+    let storage: any HBPersistDriver
 }

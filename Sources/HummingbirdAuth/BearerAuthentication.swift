@@ -12,6 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+import HTTPTypes
 import Hummingbird
 
 /// Bearer authentication information extracted from request header "Authorization"
@@ -19,11 +20,11 @@ public struct BearerAuthentication: Sendable {
     public let token: String
 }
 
-extension HBRequest {
+extension HTTPFields {
     /// Return Bearer authorization information from request
-    public var authBearer: BearerAuthentication? {
+    public var bearer: BearerAuthentication? {
         // check for authorization header
-        guard let authorization = self.headers["Authorization"].first else { return nil }
+        guard let authorization = self[.authorization] else { return nil }
         // check for bearer prefix
         guard authorization.hasPrefix("Bearer ") else { return nil }
         // return token
