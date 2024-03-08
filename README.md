@@ -8,5 +8,3 @@ Includes Authenticator middleware setup, bearer, basic authentication extraction
 ## Documentation
 
 You can find documentation for HummingbirdAuth [here](https://hummingbird-project.github.io/hummingbird-docs/2.0/documentation/hummingbird/). The [hummingbird-examples](https://github.com/hummingbird-project/hummingbird-examples) repository has a number of examples of different uses of the library.
-
-HummingbirdAuth v1.0 documentation can be found [here](https://hummingbird-project.github.io/hummingbird-docs/1.0/documentation/hummingbird/)
