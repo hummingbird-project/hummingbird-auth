@@ -14,11 +14,11 @@
 
 import ExtrasBase64
 import Hummingbird
-import HummingbirdXCT
+import HummingbirdTesting
 import XCTest
 
-/// Used to generate various authentication types for XCT tests
-public struct HBXCTAuthentication: Equatable {
+/// Used to generate various authentication types for Testing framework
+public struct HBTestAuthentication: Equatable {
     /// create basic authentication test
     public static func basic(username: String, password: String) -> Self {
         return .init(value: .basic(username: username, password: password))
@@ -71,7 +71,7 @@ public struct HBXCTAuthentication: Equatable {
     private let value: Internal
 }
 
-extension HBXCTClientProtocol {
+extension HBTestClientProtocol {
     /// Send request with authentication and call test callback on the response returned
     ///
     /// - Parameters:
@@ -82,16 +82,16 @@ extension HBXCTClientProtocol {
     ///   - body: Request body
     ///   - testCallback: Callback to test response
     /// - Returns: Result of callback
-    public func XCTExecute<Return>(
+    public func execute<Return>(
         uri: String,
         method: HTTPRequest.Method,
         headers: HTTPFields = [:],
-        auth: HBXCTAuthentication,
+        auth: HBTestAuthentication,
         body: ByteBuffer? = nil,
-        testCallback: @escaping (HBXCTResponse) throws -> Return
+        testCallback: @escaping (HBTestResponse) throws -> Return
     ) async throws -> Return {
         let request = auth.apply(uri: uri, method: method, headers: headers, body: body)
-        return try await self.XCTExecute(
+        return try await self.execute(
             uri: request.uri,
             method: request.method,
             headers: request.headers,
