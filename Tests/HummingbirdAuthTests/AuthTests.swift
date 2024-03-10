@@ -50,11 +50,11 @@ final class AuthTests: XCTestCase {
     }
 
     func testBearer() async throws {
-        let router = HBRouter(context: HBBasicAuthRequestContext.self)
+        let router = Router(context: BasicAuthRequestContext.self)
         router.get { request, _ -> String? in
             return request.headers.bearer?.token
         }
-        let app = HBApplication(responder: router.buildResponder())
+        let app = Application(responder: router.buildResponder())
         try await app.test(.router) { client in
             try await client.execute(uri: "/", method: .get, auth: .bearer("1234567890")) { response in
                 let body = try XCTUnwrap(response.body)
@@ -67,11 +67,11 @@ final class AuthTests: XCTestCase {
     }
 
     func testBasic() async throws {
-        let router = HBRouter(context: HBBasicAuthRequestContext.self)
+        let router = Router(context: BasicAuthRequestContext.self)
         router.get { request, _ -> String? in
             return request.headers.basic.map { "\($0.username):\($0.password)" }
         }
-        let app = HBApplication(responder: router.buildResponder())
+        let app = Application(responder: router.buildResponder())
         try await app.test(.router) { client in
             try await client.execute(uri: "/", method: .get, auth: .basic(username: "adam", password: "password")) { response in
                 let body = try XCTUnwrap(response.body)
@@ -81,10 +81,10 @@ final class AuthTests: XCTestCase {
     }
 
     func testBcryptThread() async throws {
-        let persist = HBMemoryPersistDriver()
-        let router = HBRouter(context: HBBasicAuthRequestContext.self)
+        let persist = MemoryPersistDriver()
+        let router = Router(context: BasicAuthRequestContext.self)
         router.put { request, _ -> HTTPResponse.Status in
-            guard let basic = request.headers.basic else { throw HBHTTPError(.unauthorized) }
+            guard let basic = request.headers.basic else { throw HTTPError(.unauthorized) }
             let hash = try await NIOThreadPool.singleton.runIfActive {
                 Bcrypt.hash(basic.password)
             }
@@ -92,8 +92,8 @@ final class AuthTests: XCTestCase {
             return .ok
         }
         router.post { request, _ -> HTTPResponse.Status in
-            guard let basic = request.headers.basic else { throw HBHTTPError(.unauthorized) }
-            guard let hash = try await persist.get(key: basic.username, as: String.self) else { throw HBHTTPError(.unauthorized) }
+            guard let basic = request.headers.basic else { throw HTTPError(.unauthorized) }
+            guard let hash = try await persist.get(key: basic.username, as: String.self) else { throw HTTPError(.unauthorized) }
             let verified = try await NIOThreadPool.singleton.runIfActive {
                 Bcrypt.verify(basic.password, hash: hash)
             }
@@ -103,7 +103,7 @@ final class AuthTests: XCTestCase {
                 return .unauthorized
             }
         }
-        let app = HBApplication(responder: router.buildResponder())
+        let app = Application(responder: router.buildResponder())
         try await app.test(.router) { client in
             try await client.execute(uri: "/", method: .put, auth: .basic(username: "testuser", password: "testpassword123")) { response in
                 XCTAssertEqual(response.status, .ok)
@@ -115,10 +115,10 @@ final class AuthTests: XCTestCase {
     }
 
     func testAuth() async throws {
-        struct User: HBAuthenticatable {
+        struct User: Authenticatable {
             let name: String
         }
-        let router = HBRouter(context: HBBasicAuthRequestContext.self)
+        let router = Router(context: BasicAuthRequestContext.self)
         router.get { _, context -> HTTPResponse.Status in
             var context = context
             context.auth.login(User(name: "Test"))
@@ -129,7 +129,7 @@ final class AuthTests: XCTestCase {
             XCTAssertNil(context.auth.get(User.self))
             return .accepted
         }
-        let app = HBApplication(responder: router.buildResponder())
+        let app = Application(responder: router.buildResponder())
 
         try await app.test(.router) { client in
             try await client.execute(uri: "/", method: .get) { response in
@@ -139,21 +139,21 @@ final class AuthTests: XCTestCase {
     }
 
     func testLogin() async throws {
-        struct User: HBAuthenticatable {
+        struct User: Authenticatable {
             let name: String
         }
-        struct HBTestAuthenticator<Context: HBAuthRequestContext>: HBAuthenticator {
-            func authenticate(request: HBRequest, context: Context) async throws -> User? {
+        struct TestAuthenticator<Context: AuthRequestContext>: Authenticator {
+            func authenticate(request: Request, context: Context) async throws -> User? {
                 User(name: "Adam")
             }
         }
-        let router = HBRouter(context: HBBasicAuthRequestContext.self)
-        router.middlewares.add(HBTestAuthenticator())
+        let router = Router(context: BasicAuthRequestContext.self)
+        router.middlewares.add(TestAuthenticator())
         router.get { _, context -> HTTPResponse.Status in
             guard context.auth.has(User.self) else { return .unauthorized }
             return .ok
         }
-        let app = HBApplication(responder: router.buildResponder())
+        let app = Application(responder: router.buildResponder())
 
         try await app.test(.router) { client in
             try await client.execute(uri: "/", method: .get) { response in
@@ -163,17 +163,17 @@ final class AuthTests: XCTestCase {
     }
 
     func testIsAuthenticatedMiddleware() async throws {
-        struct User: HBAuthenticatable {
+        struct User: Authenticatable {
             let name: String
         }
-        struct HBTestAuthenticator<Context: HBAuthRequestContext>: HBAuthenticator {
-            func authenticate(request: HBRequest, context: Context) async throws -> User? {
+        struct TestAuthenticator<Context: AuthRequestContext>: Authenticator {
+            func authenticate(request: Request, context: Context) async throws -> User? {
                 User(name: "Adam")
             }
         }
-        let router = HBRouter(context: HBBasicAuthRequestContext.self)
+        let router = Router(context: BasicAuthRequestContext.self)
         router.group()
-            .add(middleware: HBTestAuthenticator())
+            .add(middleware: TestAuthenticator())
             .add(middleware: IsAuthenticatedMiddleware(User.self))
             .get("authenticated") { _, _ -> HTTPResponse.Status in
                 return .ok
@@ -183,7 +183,7 @@ final class AuthTests: XCTestCase {
             .get("unauthenticated") { _, _ -> HTTPResponse.Status in
                 return .ok
             }
-        let app = HBApplication(responder: router.buildResponder())
+        let app = Application(responder: router.buildResponder())
 
         try await app.test(.router) { client in
             try await client.execute(uri: "/authenticated", method: .get) { response in
@@ -196,23 +196,23 @@ final class AuthTests: XCTestCase {
     }
 
     func testSessionAuthenticator() async throws {
-        struct User: HBAuthenticatable {
+        struct User: Authenticatable {
             let name: String
         }
-        struct MySessionAuthenticator<Context: HBAuthRequestContext>: HBSessionAuthenticator {
-            let sessionStorage: HBSessionStorage
+        struct MySessionAuthenticator<Context: AuthRequestContext>: SessionAuthenticator {
+            let sessionStorage: SessionStorage
 
-            func getValue(from session: Int, request: HBRequest, context: Context) async throws -> User? {
+            func getValue(from session: Int, request: Request, context: Context) async throws -> User? {
                 return User(name: "Adam")
             }
         }
-        let router = HBRouter(context: HBBasicAuthRequestContext.self)
-        let persist = HBMemoryPersistDriver()
-        let sessions = HBSessionStorage(persist)
+        let router = Router(context: BasicAuthRequestContext.self)
+        let persist = MemoryPersistDriver()
+        let sessions = SessionStorage(persist)
 
-        router.put("session") { _, _ -> HBResponse in
+        router.put("session") { _, _ -> Response in
             let cookie = try await sessions.save(session: 1, expiresIn: .seconds(60))
-            var response = HBResponse(status: .ok)
+            var response = Response(status: .ok)
             response.setCookie(cookie)
             return response
         }
@@ -222,7 +222,7 @@ final class AuthTests: XCTestCase {
                 _ = try context.auth.require(User.self)
                 return .ok
             }
-        let app = HBApplication(responder: router.buildResponder())
+        let app = Application(responder: router.buildResponder())
 
         try await app.test(.router) { client in
             let responseCookies = try await client.execute(uri: "/session", method: .put) { response -> String? in

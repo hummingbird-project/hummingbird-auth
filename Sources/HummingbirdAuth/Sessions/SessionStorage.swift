@@ -16,8 +16,8 @@ import ExtrasBase64
 import Hummingbird
 
 /// Stores session data
-public struct HBSessionStorage: Sendable {
-    /// HBSessionStorage Errors
+public struct SessionStorage: Sendable {
+    /// SessionStorage Errors
     public struct Error: Swift.Error, Equatable {
         enum ErrorType {
             case sessionDoesNotExist
@@ -35,7 +35,7 @@ public struct HBSessionStorage: Sendable {
     let sessionCookie: String
 
     /// Initialize session storage
-    public init(_ storage: any HBPersistDriver, sessionCookie: String = "SESSION_ID") {
+    public init(_ storage: any PersistDriver, sessionCookie: String = "SESSION_ID") {
         self.storage = storage
         self.sessionCookie = sessionCookie
     }
@@ -44,17 +44,17 @@ public struct HBSessionStorage: Sendable {
     ///
     /// Saving a new session will create a new session id and returns a cookie setting
     /// the session id. You need to then return a response including this cookie. You
-    /// can either create an ``HummingbirdCore/HBResponse`` directly or use ``Hummingbird/HBEditedResponse`` to
+    /// can either create an ``HummingbirdCore/Response`` directly or use ``Hummingbird/EditedResponse`` to
     /// generate the response from another type.
     /// ```swift
     /// let cookie = try await sessionStorage.save(session: session, expiresIn: .seconds(600))
-    /// var response = HBEditedResponse(response: responseGenerator)
+    /// var response = EditedResponse(response: responseGenerator)
     /// response.setCookie(cookie)
     /// return response
     /// ```
     /// If you know a session already exists it is preferable to use
-    /// ``HBSessionStorage/update(session:expiresIn:request:)``.
-    public func save(session: some Codable, expiresIn: Duration) async throws -> HBCookie {
+    /// ``SessionStorage/update(session:expiresIn:request:)``.
+    public func save(session: some Codable, expiresIn: Duration) async throws -> Cookie {
         let sessionId = Self.createSessionId()
         // prefix with "hbs."
         try await self.storage.set(
@@ -68,7 +68,7 @@ public struct HBSessionStorage: Sendable {
     /// update existing session
     ///
     /// If session does not exist then a `sessionDoesNotExist` error will be thrown
-    public func update(session: some Codable, expiresIn: Duration, request: HBRequest) async throws {
+    public func update(session: some Codable, expiresIn: Duration, request: Request) async throws {
         guard let sessionId = self.getId(request: request) else {
             throw Error.sessionDoesNotExist
         }
@@ -81,7 +81,7 @@ public struct HBSessionStorage: Sendable {
     }
 
     /// load session
-    public func load<Session: Codable>(as: Session.Type = Session.self, request: HBRequest) async throws -> Session? {
+    public func load<Session: Codable>(as: Session.Type = Session.self, request: Request) async throws -> Session? {
         guard let sessionId = getId(request: request) else { return nil }
         // prefix with "hbs."
         return try await self.storage.get(
@@ -91,7 +91,7 @@ public struct HBSessionStorage: Sendable {
     }
 
     /// delete session
-    public func delete(request: HBRequest) async throws {
+    public func delete(request: Request) async throws {
         guard let sessionId = getId(request: request) else { return }
         // prefix with "hbs."
         return try await self.storage.remove(
@@ -100,16 +100,16 @@ public struct HBSessionStorage: Sendable {
     }
 
     /// Get session id gets id from request
-    func getId(request: HBRequest) -> String? {
+    func getId(request: Request) -> String? {
         guard let sessionCookie = request.cookies[self.sessionCookie]?.value else { return nil }
         return String(sessionCookie)
     }
 
     /// set session id on response
-    func setId(_ id: String, request: HBRequest) {
+    func setId(_ id: String, request: Request) {
         /* precondition(
              request.extensions.get(\.response) != nil,
-             "Saving a session involves editing the response via HBRequest.response which cannot be done outside of a route without the .editResponse option set"
+             "Saving a session involves editing the response via Request.response which cannot be done outside of a route without the .editResponse option set"
          )
                  switch self.sessionID {
           case .cookie(let cookie):
@@ -125,8 +125,8 @@ public struct HBSessionStorage: Sendable {
         return String(base64Encoding: bytes)
     }
 
-    // This is wrapped in an unsafe storage wrapper because I cannot conform `HBPersistDriver`
+    // This is wrapped in an unsafe storage wrapper because I cannot conform `PersistDriver`
     // to `Sendable` at this point because Redis and Fluent types do not currently conform to
     // `Sendable` when it should be possible for this to be the case.
-    let storage: any HBPersistDriver
+    let storage: any PersistDriver
 }
