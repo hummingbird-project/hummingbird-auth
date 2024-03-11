@@ -11,7 +11,7 @@ let package = Package(
         .library(name: "HummingbirdAuthTesting", targets: ["HummingbirdAuthTesting"]),
     ],
     dependencies: [
-        .package(url: "https://github.com/hummingbird-project/hummingbird.git", branch: "remove-hb-prefix"),
+        .package(url: "https://github.com/hummingbird-project/hummingbird.git", branch: "main"),
         .package(url: "https://github.com/apple/swift-crypto.git", "1.0.0"..<"4.0.0"),
         .package(url: "https://github.com/apple/swift-nio.git", from: "2.63.0"),
         .package(url: "https://github.com/swift-extras/swift-extras-base64.git", .upToNextMinor(from: "0.7.0")),
