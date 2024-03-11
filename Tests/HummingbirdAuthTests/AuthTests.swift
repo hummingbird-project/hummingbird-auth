@@ -142,7 +142,7 @@ final class AuthTests: XCTestCase {
         struct User: Authenticatable {
             let name: String
         }
-        struct TestAuthenticator<Context: AuthRequestContext>: Authenticator {
+        struct TestAuthenticator<Context: AuthRequestContext>: AuthenticatorMiddleware {
             func authenticate(request: Request, context: Context) async throws -> User? {
                 User(name: "Adam")
             }
@@ -166,7 +166,7 @@ final class AuthTests: XCTestCase {
         struct User: Authenticatable {
             let name: String
         }
-        struct TestAuthenticator<Context: AuthRequestContext>: Authenticator {
+        struct TestAuthenticator<Context: AuthRequestContext>: AuthenticatorMiddleware {
             func authenticate(request: Request, context: Context) async throws -> User? {
                 User(name: "Adam")
             }
@@ -199,7 +199,7 @@ final class AuthTests: XCTestCase {
         struct User: Authenticatable {
             let name: String
         }
-        struct MySessionAuthenticator<Context: AuthRequestContext>: SessionAuthenticator {
+        struct MySessionAuthenticator<Context: AuthRequestContext>: SessionMiddleware {
             let sessionStorage: SessionStorage
 
             func getValue(from session: Int, request: Request, context: Context) async throws -> User? {

@@ -27,9 +27,9 @@ public typealias HBLoginCache = LoginCache
 
 @_documentation(visibility: internal) @available(*, deprecated, renamed: "Authenticatable")
 public typealias HBAuthenticatable = Authenticatable
-@_documentation(visibility: internal) @available(*, deprecated, renamed: "Authenticator")
-public typealias HBAuthenticator = Authenticator
-@_documentation(visibility: internal) @available(*, deprecated, renamed: "SessionAuthenticator")
-public typealias HBSessionAuthenticator = SessionAuthenticator
+@_documentation(visibility: internal) @available(*, deprecated, renamed: "AuthenticatorMiddleware")
+public typealias HBAuthenticator = AuthenticatorMiddleware
+@_documentation(visibility: internal) @available(*, deprecated, renamed: "SessionMiddleware")
+public typealias HBSessionAuthenticator = SessionMiddleware
 @_documentation(visibility: internal) @available(*, deprecated, renamed: "SessionStorage")
 public typealias HBSessionStorage = SessionStorage

@@ -15,7 +15,7 @@
 import Hummingbird
 import NIOCore
 
-/// Protocol for objects that can be returned by an `Authenticator`.
+/// Protocol for objects that can be returned by an `AuthenticatorMiddleware`.
 public protocol Authenticatable: Sendable {}
 
 /// Protocol for a middleware that checks if a request is authenticated.
@@ -33,7 +33,7 @@ public protocol Authenticatable: Sendable {}
 /// authenticator is successful it returns a `User` struct, otherwise it returns `nil`.
 ///
 /// ```swift
-/// struct BasicAuthenticator: Authenticator {
+/// struct BasicAuthenticator: AuthenticatorMiddleware {
 ///     func authenticate<Context: AuthRequestContext>(request: Request, context: Context) async throws -> User? {
 ///         // Basic authentication info in the "Authorization" header, is accessible
 ///         // via request.headers.basic
@@ -55,7 +55,7 @@ public protocol Authenticatable: Sendable {}
 ///     }
 /// }
 /// ```
-public protocol Authenticator: RouterMiddleware where Context: AuthRequestContext {
+public protocol AuthenticatorMiddleware: RouterMiddleware where Context: AuthRequestContext {
     /// type to be authenticated
     associatedtype Value: Authenticatable
     /// Called by middleware to see if request can authenticate.
@@ -66,7 +66,7 @@ public protocol Authenticator: RouterMiddleware where Context: AuthRequestContex
     func authenticate(request: Request, context: Context) async throws -> Value?
 }
 
-extension Authenticator {
+extension AuthenticatorMiddleware {
     /// Calls `authenticate` and if it returns a valid authenticatable object `login` with this object
     public func handle(_ request: Request, context: Context, next: (Request, Context) async throws -> Response) async throws -> Response {
         if let authenticated = try await authenticate(request: request, context: context) {

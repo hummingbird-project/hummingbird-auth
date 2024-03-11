@@ -15,7 +15,7 @@
 import Hummingbird
 
 /// Session authenticator
-public protocol SessionAuthenticator: Authenticator {
+public protocol SessionMiddleware: AuthenticatorMiddleware {
     /// authenticable value
     associatedtype Value = Value
     /// session object
@@ -32,7 +32,7 @@ public protocol SessionAuthenticator: Authenticator {
     func getValue(from: Session, request: Request, context: Context) async throws -> Value?
 }
 
-extension SessionAuthenticator {
+extension SessionMiddleware {
     public func authenticate(request: Request, context: Context) async throws -> Value? {
         guard let session: Session = try await self.sessionStorage.load(request: request) else { return nil }
         return try await getValue(from: session, request: request, context: context)

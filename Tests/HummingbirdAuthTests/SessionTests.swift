@@ -24,7 +24,7 @@ final class SessionTests: XCTestCase {
         struct User: Authenticatable {
             let name: String
         }
-        struct MySessionAuthenticator<Context: AuthRequestContext>: SessionAuthenticator {
+        struct MySessionAuthenticator<Context: AuthRequestContext>: SessionMiddleware {
             let sessionStorage: SessionStorage
             func getValue(from session: Int, request: Request, context: Context) async throws -> User? {
                 return User(name: "Adam")
