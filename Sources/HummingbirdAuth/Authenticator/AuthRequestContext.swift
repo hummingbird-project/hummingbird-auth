@@ -18,19 +18,19 @@ import NIOCore
 
 /// Protocol that all request contexts should conform to if they want to support
 /// authentication middleware
-public protocol HBAuthRequestContext: HBRequestContext {
+public protocol AuthRequestContext: RequestContext {
     /// Login cache
-    var auth: HBLoginCache { get set }
+    var auth: LoginCache { get set }
 }
 
 /// Implementation of a basic request context that supports everything the Hummingbird library needs
-public struct HBBasicAuthRequestContext: HBAuthRequestContext {
+public struct BasicAuthRequestContext: AuthRequestContext {
     /// core context
-    public var coreContext: HBCoreRequestContext
+    public var coreContext: CoreRequestContext
     /// Login cache
-    public var auth: HBLoginCache
+    public var auth: LoginCache
 
-    ///  Initialize an `HBRequestContext`
+    ///  Initialize an `RequestContext`
     /// - Parameters:
     ///   - applicationContext: Context from Application that instigated the request
     ///   - channel: Channel that generated this request

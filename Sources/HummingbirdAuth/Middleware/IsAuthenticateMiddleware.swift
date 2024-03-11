@@ -15,10 +15,10 @@
 import Hummingbird
 
 /// Middleware returning 404 for unauthenticated requests
-public struct IsAuthenticatedMiddleware<Auth: HBAuthenticatable, Context: HBAuthRequestContext>: HBMiddlewareProtocol {
+public struct IsAuthenticatedMiddleware<Auth: Authenticatable, Context: AuthRequestContext>: RouterMiddleware {
     public init(_: Auth.Type) {}
 
-    public func handle(_ request: HBRequest, context: Context, next: (HBRequest, Context) async throws -> HBResponse) async throws -> HBResponse { guard context.auth.has(Auth.self) else { throw HBHTTPError(.unauthorized) }
+    public func handle(_ request: Request, context: Context, next: (Request, Context) async throws -> Response) async throws -> Response { guard context.auth.has(Auth.self) else { throw HTTPError(.unauthorized) }
         return try await next(request, context)
     }
 }

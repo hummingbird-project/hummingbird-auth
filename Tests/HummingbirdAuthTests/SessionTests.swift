@@ -21,21 +21,21 @@ import XCTest
 
 final class SessionTests: XCTestCase {
     func testSessionAuthenticator() async throws {
-        struct User: HBAuthenticatable {
+        struct User: Authenticatable {
             let name: String
         }
-        struct MySessionAuthenticator<Context: HBAuthRequestContext>: HBSessionAuthenticator {
-            let sessionStorage: HBSessionStorage
-            func getValue(from session: Int, request: HBRequest, context: Context) async throws -> User? {
+        struct MySessionAuthenticator<Context: AuthRequestContext>: SessionMiddleware {
+            let sessionStorage: SessionStorage
+            func getValue(from session: Int, request: Request, context: Context) async throws -> User? {
                 return User(name: "Adam")
             }
         }
-        let router = HBRouter(context: HBBasicAuthRequestContext.self)
-        let persist = HBMemoryPersistDriver()
-        let sessions = HBSessionStorage(persist)
-        router.put("session") { _, _ -> HBResponse in
+        let router = Router(context: BasicAuthRequestContext.self)
+        let persist = MemoryPersistDriver()
+        let sessions = SessionStorage(persist)
+        router.put("session") { _, _ -> Response in
             let cookie = try await sessions.save(session: 1, expiresIn: .seconds(300))
-            var response = HBResponse(status: .ok)
+            var response = Response(status: .ok)
             response.setCookie(cookie)
             return response
         }
@@ -45,7 +45,7 @@ final class SessionTests: XCTestCase {
                 _ = try context.auth.require(User.self)
                 return .ok
             }
-        let app = HBApplication(responder: router.buildResponder())
+        let app = Application(responder: router.buildResponder())
 
         try await app.test(.router) { client in
             let responseCookies = try await client.execute(uri: "/session", method: .put) { response -> String? in
@@ -64,26 +64,26 @@ final class SessionTests: XCTestCase {
             let name: String
         }
 
-        let router = HBRouter(context: HBBasicAuthRequestContext.self)
-        let persist = HBMemoryPersistDriver()
-        let sessions = HBSessionStorage(persist)
-        router.post("save") { request, _ -> HBResponse in
-            guard let name = request.uri.queryParameters.get("name") else { throw HBHTTPError(.badRequest) }
+        let router = Router(context: BasicAuthRequestContext.self)
+        let persist = MemoryPersistDriver()
+        let sessions = SessionStorage(persist)
+        router.post("save") { request, _ -> Response in
+            guard let name = request.uri.queryParameters.get("name") else { throw HTTPError(.badRequest) }
             let cookie = try await sessions.save(session: User(name: name), expiresIn: .seconds(600))
-            var response = HBResponse(status: .ok)
+            var response = Response(status: .ok)
             response.setCookie(cookie)
             return response
         }
         router.post("update") { request, _ -> HTTPResponse.Status in
-            guard let name = request.uri.queryParameters.get("name") else { throw HBHTTPError(.badRequest) }
+            guard let name = request.uri.queryParameters.get("name") else { throw HTTPError(.badRequest) }
             try await sessions.update(session: User(name: name), expiresIn: .seconds(600), request: request)
             return .ok
         }
         router.get("name") { request, _ -> String in
-            guard let user = try await sessions.load(as: User.self, request: request) else { throw HBHTTPError(.unauthorized) }
+            guard let user = try await sessions.load(as: User.self, request: request) else { throw HTTPError(.unauthorized) }
             return user.name
         }
-        let app = HBApplication(responder: router.buildResponder())
+        let app = Application(responder: router.buildResponder())
 
         try await app.test(.router) { client in
             let cookies = try await client.execute(uri: "/save?name=john", method: .post) { response -> String? in
@@ -105,9 +105,9 @@ final class SessionTests: XCTestCase {
     }
 
     func testSessionUpdateError() async throws {
-        let router = HBRouter(context: HBBasicAuthRequestContext.self)
-        let persist = HBMemoryPersistDriver()
-        let sessions = HBSessionStorage(persist)
+        let router = Router(context: BasicAuthRequestContext.self)
+        let persist = MemoryPersistDriver()
+        let sessions = SessionStorage(persist)
 
         router.post("update") { request, _ -> HTTPResponse.Status in
             do {
@@ -117,7 +117,7 @@ final class SessionTests: XCTestCase {
                 return .badRequest
             }
         }
-        let app = HBApplication(responder: router.buildResponder())
+        let app = Application(responder: router.buildResponder())
 
         try await app.test(.router) { client in
             try await client.execute(uri: "/update", method: .post) { response in

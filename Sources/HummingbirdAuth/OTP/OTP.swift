@@ -2,7 +2,7 @@
 //
 // This source file is part of the Hummingbird server framework project
 //
-// Copyright (c) 2021-2021 the Hummingbird authors
+// Copyright (c) 2021-2024 the Hummingbird authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -41,7 +41,7 @@ protocol OTP {
 }
 
 extension OTP {
-    /// Create Authenticator URL for OTP generator
+    /// Create authenticator URL for OTP generator
     ///
     /// - Parameters:
     ///   - algorithmName: Name of algorithm
@@ -104,7 +104,7 @@ public struct HOTP: OTP, Sendable {
 
     /// Initialize HOTP
     ///
-    /// If you are using the Google Authenticator you should choose the default values for length and hashFunction
+    /// If you are using the Google AuthenticatorMiddleware you should choose the default values for length and hashFunction
     ///
     /// - Parameters:
     ///   - secret: Secret known by client and server
@@ -124,9 +124,9 @@ public struct HOTP: OTP, Sendable {
         self.compute(message: counter.bigEndian.bytes)
     }
 
-    /// Create Authenticator URL for HOTP generator
+    /// Create AuthenticatorMiddleware URL for HOTP generator
     ///
-    /// OTP is used commonly with authenticator apps on the phone. The Authenticator apps require your
+    /// OTP is used commonly with authenticator apps on the phone. The AuthenticatorMiddleware apps require your
     /// secret to be Base32 encoded when you supply it. You can either supply the base32 encoded secret
     /// to be copied into the authenticator app or generate a QR Code to be scanned. This generates the
     /// URL you should create your QR Code from.
@@ -159,7 +159,7 @@ public struct TOTP: OTP, Sendable {
 
     /// Initialize TOTP
     ///
-    /// If you are using the Google Authenticator you should choose the default values for length, timeStep and hashFunction
+    /// If you are using the Google AuthenticatorMiddleware you should choose the default values for length, timeStep and hashFunction
     ///
     /// - Parameters:
     ///   - secret: Secret known by client and server
@@ -184,9 +184,9 @@ public struct TOTP: OTP, Sendable {
         return self.compute(message: value.bigEndian.bytes)
     }
 
-    /// Create Authenticator URL for TOTP generator
+    /// Create AuthenticatorMiddleware URL for TOTP generator
     ///
-    /// OTP is used commonly with authenticator apps on the phone. The Authenticator apps require your
+    /// OTP is used commonly with authenticator apps on the phone. The AuthenticatorMiddleware apps require your
     /// secret to be Base32 encoded when you supply it. You can either supply the base32 encoded secret
     /// to be copied into the authenticator app or generate a QR Code to be scanned. This generates the
     /// URL you should create your QR Code from.

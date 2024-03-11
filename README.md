@@ -2,7 +2,7 @@
 
 Authentication framework and extensions for Hummingbird server framework.
 
-Includes Authenticator middleware setup, bearer, basic authentication extraction from your Request headers, Bcrypt encryption for passwords.
+Includes authentication and session middleware, bearer, basic authentication extraction from your Request headers, Bcrypt encryption for passwords.
 
 
 ## Documentation

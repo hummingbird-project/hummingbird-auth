@@ -14,43 +14,43 @@
 
 import Hummingbird
 
-public struct HBLoginCache: Sendable {
+public struct LoginCache: Sendable {
     public init() {
         self.cache = [:]
     }
 
     /// Login with authenticatable object. Add object to cache
     /// - Parameter auth: authentication details
-    public mutating func login<Auth: HBAuthenticatable>(_ auth: Auth) {
+    public mutating func login<Auth: Authenticatable>(_ auth: Auth) {
         self.cache = [ObjectIdentifier(Auth.self): auth]
     }
 
     /// Logout authenticatable object. Removes object from cache
     /// - Parameter auth: authentication type
-    public mutating func logout<Auth: HBAuthenticatable>(_: Auth.Type) {
+    public mutating func logout<Auth: Authenticatable>(_: Auth.Type) {
         self.cache[ObjectIdentifier(Auth.self)] = nil
     }
 
     /// Return authenticated type
     /// - Parameter auth: Type required
-    public func get<Auth: HBAuthenticatable>(_: Auth.Type) -> Auth? {
+    public func get<Auth: Authenticatable>(_: Auth.Type) -> Auth? {
         return self.cache[ObjectIdentifier(Auth.self)] as? Auth
     }
 
     /// Require authenticated type
     /// - Parameter auth: Type required
-    public func require<Auth: HBAuthenticatable>(_: Auth.Type) throws -> Auth {
+    public func require<Auth: Authenticatable>(_: Auth.Type) throws -> Auth {
         guard let auth = get(Auth.self) else {
-            throw HBHTTPError(.unauthorized)
+            throw HTTPError(.unauthorized)
         }
         return auth
     }
 
     /// Return if cache is authenticated with type
     /// - Parameter auth: Authentication type
-    public func has<Auth: HBAuthenticatable>(_: Auth.Type) -> Bool {
+    public func has<Auth: Authenticatable>(_: Auth.Type) -> Bool {
         return self.cache[ObjectIdentifier(Auth.self)] != nil
     }
 
-    var cache: [ObjectIdentifier: HBAuthenticatable]
+    var cache: [ObjectIdentifier: Authenticatable]
 }

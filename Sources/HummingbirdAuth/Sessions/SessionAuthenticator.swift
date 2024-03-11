@@ -15,25 +15,25 @@
 import Hummingbird
 
 /// Session authenticator
-public protocol HBSessionAuthenticator: HBAuthenticator {
+public protocol SessionMiddleware: AuthenticatorMiddleware {
     /// authenticable value
     associatedtype Value = Value
     /// session object
     associatedtype Session: Codable
 
     /// container for session objects
-    var sessionStorage: HBSessionStorage { get }
+    var sessionStorage: SessionStorage { get }
 
     /// Convert Session object into authenticated user
     /// - Parameters:
     ///   - from: session
     ///   - request: request being processed
     /// - Returns: Future holding optional authenticated user
-    func getValue(from: Session, request: HBRequest, context: Context) async throws -> Value?
+    func getValue(from: Session, request: Request, context: Context) async throws -> Value?
 }
 
-extension HBSessionAuthenticator {
-    public func authenticate(request: HBRequest, context: Context) async throws -> Value? {
+extension SessionMiddleware {
+    public func authenticate(request: Request, context: Context) async throws -> Value? {
         guard let session: Session = try await self.sessionStorage.load(request: request) else { return nil }
         return try await getValue(from: session, request: request, context: context)
     }
