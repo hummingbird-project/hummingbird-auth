@@ -27,7 +27,7 @@ final class OTPTests: XCTestCase {
     func testBase32() {
         let data = [UInt8]("ABCDEFGHITJKLMNOPQRSTUVWXYZabcedefé".utf8)
         let base32 = String(base32Encoding: data)
-        XCTAssertEqual(base32, "IFBEGRCFIZDUQSKUJJFUYTKOJ5IFCUSTKRKVMV2YLFNGCYTDMVSGKZWDVE")
+        XCTAssertEqual(base32, "IFBEGRCFIZDUQSKUJJFUYTKOJ5IFCUSTKRKVMV2YLFNGCYTDMVSGKZWDVE======")
     }
 
     func testBase32EncodeDecode() {
@@ -72,6 +72,6 @@ final class OTPTests: XCTestCase {
     func testAuthenticatorURL() {
         let secret = "HB12345678901234567890"
         let url = TOTP(secret: secret, length: 8).createAuthenticatorURL(label: "TOTP test", issuer: "Hummingbird")
-        XCTAssertEqual(url, "otpauth://totp/TOTP%20test?secret=JBBDCMRTGQ2TMNZYHEYDCMRTGQ2TMNZYHEYA&issuer=Hummingbird&digits=8")
+        XCTAssertEqual(url, "otpauth://totp/TOTP%20test?secret=JBBDCMRTGQ2TMNZYHEYDCMRTGQ2TMNZYHEYA====&issuer=Hummingbird&digits=8")
     }
 }
