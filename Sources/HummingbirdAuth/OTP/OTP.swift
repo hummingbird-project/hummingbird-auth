@@ -49,7 +49,7 @@ extension OTP {
     ///   - issuer: Who issued the URL
     ///   - parameters: additional parameters
     func createAuthenticatorURL(algorithmName: String, label: String, issuer: String?, parameters: [String: String]) -> String {
-        let base32 = String(base32Encoding: secret.utf8)
+        let base32 = String(base32Encoding: secret.utf8, options: .omitPaddingCharacter)
         let label = label.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? label
         let issuer = issuer?.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? issuer
         var url = "otpauth://\(algorithmName)/\(label)?secret=\(base32)"

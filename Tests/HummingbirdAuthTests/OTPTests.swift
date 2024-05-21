@@ -24,19 +24,6 @@ final class OTPTests: XCTestCase {
         return data
     }
 
-    func testBase32() {
-        let data = [UInt8]("ABCDEFGHITJKLMNOPQRSTUVWXYZabcedefé".utf8)
-        let base32 = String(base32Encoding: data)
-        XCTAssertEqual(base32, "IFBEGRCFIZDUQSKUJJFUYTKOJ5IFCUSTKRKVMV2YLFNGCYTDMVSGKZWDVE======")
-    }
-
-    func testBase32EncodeDecode() {
-        let data = self.randomBuffer(size: Int.random(in: 4000...8000))
-        let base32 = String(base32Encoding: data)
-        let data2 = try! base32.base32decoded()
-        XCTAssertEqual(data, data2)
-    }
-
     func testHOTP() {
         // test against RFC4226 example values https://tools.ietf.org/html/rfc4226#page-32
         let secret = "12345678901234567890"
@@ -72,6 +59,6 @@ final class OTPTests: XCTestCase {
     func testAuthenticatorURL() {
         let secret = "HB12345678901234567890"
         let url = TOTP(secret: secret, length: 8).createAuthenticatorURL(label: "TOTP test", issuer: "Hummingbird")
-        XCTAssertEqual(url, "otpauth://totp/TOTP%20test?secret=JBBDCMRTGQ2TMNZYHEYDCMRTGQ2TMNZYHEYA====&issuer=Hummingbird&digits=8")
+        XCTAssertEqual(url, "otpauth://totp/TOTP%20test?secret=JBBDCMRTGQ2TMNZYHEYDCMRTGQ2TMNZYHEYA&issuer=Hummingbird&digits=8")
     }
 }
