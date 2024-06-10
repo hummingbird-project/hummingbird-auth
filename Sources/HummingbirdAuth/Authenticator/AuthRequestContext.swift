@@ -35,8 +35,8 @@ public struct BasicAuthRequestContext: AuthRequestContext, RequestContext {
     ///   - applicationContext: Context from Application that instigated the request
     ///   - channel: Channel that generated this request
     ///   - logger: Logger
-    public init(channel: Channel, logger: Logger) {
-        self.coreContext = .init(allocator: channel.allocator, logger: logger)
+    public init(source: Source) {
+        self.coreContext = .init(source: source)
         self.auth = .init()
     }
 }
