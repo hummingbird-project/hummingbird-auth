@@ -26,7 +26,7 @@ public protocol AuthRequestContext {
 /// Implementation of a basic request context that supports everything the Hummingbird library needs
 public struct BasicAuthRequestContext: AuthRequestContext, RequestContext {
     /// core context
-    public var coreContext: CoreRequestContext
+    public var coreContext: CoreRequestContextStorage
     /// Login cache
     public var auth: LoginCache
 
