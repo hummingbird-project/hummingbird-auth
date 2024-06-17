@@ -26,7 +26,7 @@ public protocol AuthRequestContext {
 /// Implementation of a basic request context that supports everything the Hummingbird library needs
 public struct BasicAuthRequestContext: AuthRequestContext, RequestContext {
     /// core context
-    public var coreContext: CoreRequestContext
+    public var coreContext: CoreRequestContextStorage
     /// Login cache
     public var auth: LoginCache
 
@@ -35,8 +35,8 @@ public struct BasicAuthRequestContext: AuthRequestContext, RequestContext {
     ///   - applicationContext: Context from Application that instigated the request
     ///   - channel: Channel that generated this request
     ///   - logger: Logger
-    public init(channel: Channel, logger: Logger) {
-        self.coreContext = .init(allocator: channel.allocator, logger: logger)
+    public init(source: Source) {
+        self.coreContext = .init(source: source)
         self.auth = .init()
     }
 }
