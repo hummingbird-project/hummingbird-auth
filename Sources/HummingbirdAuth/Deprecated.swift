@@ -12,24 +12,21 @@
 //
 //===----------------------------------------------------------------------===//
 
-// Below is a list of deprecated symbols with the "HB" prefix. These are available
+// Below is a list of unavailable symbols with the "HB" prefix. These are available
 // temporarily to ease transition from the old symbols that included the "HB"
 // prefix to the new ones.
-//
-// This file will be removed before we do a 2.0 release
-
-@_documentation(visibility: internal) @available(*, deprecated, renamed: "AuthRequestContext")
+@_documentation(visibility: internal) @available(*, unavailable, renamed: "AuthRequestContext")
 public typealias HBAuthRequestContext = AuthRequestContext
-@_documentation(visibility: internal) @available(*, deprecated, renamed: "BasicAuthRequestContext")
+@_documentation(visibility: internal) @available(*, unavailable, renamed: "BasicAuthRequestContext")
 public typealias HBBasicAuthRequestContext = BasicAuthRequestContext
-@_documentation(visibility: internal) @available(*, deprecated, renamed: "LoginCache")
+@_documentation(visibility: internal) @available(*, unavailable, renamed: "LoginCache")
 public typealias HBLoginCache = LoginCache
 
-@_documentation(visibility: internal) @available(*, deprecated, renamed: "Authenticatable")
+@_documentation(visibility: internal) @available(*, unavailable, renamed: "Authenticatable")
 public typealias HBAuthenticatable = Authenticatable
-@_documentation(visibility: internal) @available(*, deprecated, renamed: "AuthenticatorMiddleware")
+@_documentation(visibility: internal) @available(*, unavailable, renamed: "AuthenticatorMiddleware")
 public typealias HBAuthenticator = AuthenticatorMiddleware
-@_documentation(visibility: internal) @available(*, deprecated, renamed: "SessionMiddleware")
+@_documentation(visibility: internal) @available(*, unavailable, renamed: "SessionMiddleware")
 public typealias HBSessionAuthenticator = SessionMiddleware
-@_documentation(visibility: internal) @available(*, deprecated, renamed: "SessionStorage")
+@_documentation(visibility: internal) @available(*, unavailable, renamed: "SessionStorage")
 public typealias HBSessionStorage = SessionStorage
