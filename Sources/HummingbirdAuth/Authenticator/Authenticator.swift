@@ -20,7 +20,7 @@ public protocol Authenticatable: Sendable {}
 
 /// Protocol for a middleware that checks if a request is authenticated.
 ///
-/// Requires an `authenticate` function that returns authentication data when successdul.
+/// Requires an `authenticate` function that returns authentication data when successful.
 /// If it is unsuccessful then nil should be returned so middleware further down the
 /// middleware chain can do authentication. If you don't want any further middleware to
 /// run then throw an error.

@@ -105,20 +105,6 @@ public struct SessionStorage: Sendable {
         return String(sessionCookie)
     }
 
-    /// set session id on response
-    func setId(_ id: String, request: Request) {
-        /* precondition(
-             request.extensions.get(\.response) != nil,
-             "Saving a session involves editing the response via Request.response which cannot be done outside of a route without the .editResponse option set"
-         )
-                 switch self.sessionID {
-          case .cookie(let cookie):
-              request.response.setCookie(.init(name: cookie, value: id, path: "/"))
-          case .header(let header):
-              request.response.headers.replaceOrAdd(name: header, value: id)
-          } */
-    }
-
     /// create a session id
     static func createSessionId() -> String {
         let bytes: [UInt8] = (0..<32).map { _ in UInt8.random(in: 0...255) }
