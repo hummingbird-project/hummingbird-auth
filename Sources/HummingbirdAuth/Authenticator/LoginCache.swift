@@ -22,7 +22,7 @@ public struct LoginCache: Sendable {
     /// Login with authenticatable object. Add object to cache
     /// - Parameter auth: authentication details
     public mutating func login<Auth: Authenticatable>(_ auth: Auth) {
-        self.cache = [ObjectIdentifier(Auth.self): auth]
+        self.cache[ObjectIdentifier(Auth.self)] = auth
     }
 
     /// Logout authenticatable object. Removes object from cache
