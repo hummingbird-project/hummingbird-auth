@@ -14,7 +14,7 @@
 
 import Hummingbird
 
-/// Middleware returning 404 for unauthenticated requests
+/// Middleware returning 401 for unauthenticated requests
 public struct IsAuthenticatedMiddleware<Auth: Authenticatable, Context: AuthRequestContext>: RouterMiddleware {
     public init(_: Auth.Type) {}
 
