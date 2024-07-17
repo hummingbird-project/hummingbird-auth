@@ -118,15 +118,32 @@ final class AuthTests: XCTestCase {
         struct User: Authenticatable {
             let name: String
         }
+        struct Additional: Authenticatable {
+            let something: String
+        }
         let router = Router(context: BasicAuthRequestContext.self)
         router.get { _, context -> HTTPResponse.Status in
             var context = context
             context.auth.login(User(name: "Test"))
+            context.auth.login(Additional(something: "abc"))
+
             XCTAssert(context.auth.has(User.self))
             XCTAssertEqual(context.auth.get(User.self)?.name, "Test")
+            XCTAssert(context.auth.has(Additional.self))
+            XCTAssertEqual(context.auth.get(Additional.self)?.something, "abc")
+
             context.auth.logout(User.self)
             XCTAssertFalse(context.auth.has(User.self))
             XCTAssertNil(context.auth.get(User.self))
+            XCTAssert(context.auth.has(Additional.self))
+            XCTAssertEqual(context.auth.get(Additional.self)?.something, "abc")
+
+            context.auth.logout(Additional.self)
+            XCTAssertFalse(context.auth.has(User.self))
+            XCTAssertNil(context.auth.get(User.self))
+            XCTAssertFalse(context.auth.has(Additional.self))
+            XCTAssertNil(context.auth.get(Additional.self))
+
             return .accepted
         }
         let app = Application(responder: router.buildResponder())
