@@ -16,6 +16,7 @@ import Bcrypt
 import Hummingbird
 import HummingbirdAuth
 import HummingbirdAuthTesting
+import HummingbirdBasicAuth
 import HummingbirdTesting
 import NIOPosix
 import XCTest
@@ -221,6 +222,37 @@ final class AuthTests: XCTestCase {
             let cookies = try XCTUnwrap(responseCookies)
             try await client.execute(uri: "/session", method: .get, headers: [.cookie: cookies]) { response in
                 XCTAssertEqual(response.status, .ok)
+            }
+        }
+    }
+
+    func testBasicAuthenticator() async throws {
+        struct MyUserRepository: UserRepository {
+            struct User: BasicUser {
+                let username: String
+                let passwordHash: String?
+            }
+
+            func getUser(named username: String) -> User? {
+                return self.users[username].map { .init(username: username, passwordHash: $0) }
+            }
+
+            let users = ["admin": Bcrypt.hash("password", cost: 8)]
+        }
+        let router = Router(context: BasicAuthRequestContext.self)
+        router.add(middleware: BasicAuthenticator(users: MyUserRepository()))
+        router.get { _, context -> String? in
+            let user = try context.auth.require(MyUserRepository.User.self)
+            return user.username
+        }
+        let app = Application(responder: router.buildResponder())
+        try await app.test(.router) { client in
+            try await client.execute(uri: "/", method: .get, auth: .basic(username: "admin", password: "password")) { response in
+                let body = try XCTUnwrap(response.body)
+                XCTAssertEqual(String(buffer: body), "admin")
+            }
+            try await client.execute(uri: "/", method: .get, auth: .basic(username: "adam", password: "password")) { response in
+                XCTAssertEqual(response.status, .unauthorized)
             }
         }
     }
