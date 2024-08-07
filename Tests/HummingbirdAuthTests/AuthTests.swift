@@ -12,6 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+import Bcrypt
 import Hummingbird
 import HummingbirdAuth
 import HummingbirdAuthTesting
@@ -20,35 +21,6 @@ import NIOPosix
 import XCTest
 
 final class AuthTests: XCTestCase {
-    func testBcrypt() {
-        let hash = Bcrypt.hash("password")
-        XCTAssert(Bcrypt.verify("password", hash: hash))
-    }
-
-    func testBcryptFalse() {
-        let hash = Bcrypt.hash("password")
-        XCTAssertFalse(Bcrypt.verify("password1", hash: hash))
-    }
-
-    func testMultipleBcrypt() async throws {
-        struct VerifyFailError: Error {}
-
-        try await withThrowingTaskGroup(of: Void.self) { group in
-            for i in 0..<8 {
-                group.addTask {
-                    let text = "This is a test \(i)"
-                    let hash = Bcrypt.hash(text)
-                    if Bcrypt.verify(text, hash: hash) {
-                        return
-                    } else {
-                        throw VerifyFailError()
-                    }
-                }
-            }
-            try await group.waitForAll()
-        }
-    }
-
     func testBearer() async throws {
         let router = Router(context: BasicAuthRequestContext.self)
         router.get { request, _ -> String? in

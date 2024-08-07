@@ -8,6 +8,8 @@ let package = Package(
     platforms: [.macOS(.v14), .iOS(.v17), .tvOS(.v17)],
     products: [
         .library(name: "HummingbirdAuth", targets: ["HummingbirdAuth"]),
+        .library(name: "Bcrypt", targets: ["Bcrypt"]),
+        .library(name: "OTP", targets: ["OTP"]),
         .library(name: "HummingbirdAuthTesting", targets: ["HummingbirdAuthTesting"]),
     ],
     dependencies: [
@@ -18,10 +20,14 @@ let package = Package(
     ],
     targets: [
         .target(name: "HummingbirdAuth", dependencies: [
+            .product(name: "Hummingbird", package: "hummingbird"),
+        ]),
+        .target(name: "Bcrypt", dependencies: [
             .byName(name: "CBcrypt"),
+        ]),
+        .target(name: "OTP", dependencies: [
             .product(name: "Crypto", package: "swift-crypto"),
             .product(name: "ExtrasBase64", package: "swift-extras-base64"),
-            .product(name: "Hummingbird", package: "hummingbird"),
         ]),
         .target(name: "HummingbirdAuthTesting", dependencies: [
             .byName(name: "HummingbirdAuth"),
@@ -30,6 +36,8 @@ let package = Package(
         .target(name: "CBcrypt", dependencies: []),
         .testTarget(name: "HummingbirdAuthTests", dependencies: [
             .byName(name: "HummingbirdAuth"),
+            .byName(name: "Bcrypt"),
+            .byName(name: "OTP"),
             .byName(name: "HummingbirdAuthTesting"),
             .product(name: "HummingbirdTesting", package: "hummingbird"),
             .product(name: "NIOPosix", package: "swift-nio"),

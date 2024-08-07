@@ -13,7 +13,6 @@
 //===----------------------------------------------------------------------===//
 
 @_implementationOnly import CBcrypt
-import Hummingbird
 
 /// Bcrypt password hashing function
 ///
