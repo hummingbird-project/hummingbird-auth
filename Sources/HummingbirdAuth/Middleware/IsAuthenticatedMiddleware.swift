@@ -18,7 +18,7 @@ import Hummingbird
 public struct IsAuthenticatedMiddleware<Auth: Authenticatable, Context: AuthRequestContext>: RouterMiddleware {
     public init(_: Auth.Type) {}
 
-    public func handle(_ request: Request, context: Context, next: (Request, Context) async throws -> Response) async throws -> Response { 
+    public func handle(_ request: Request, context: Context, next: (Request, Context) async throws -> Response) async throws -> Response {
         guard context.auth.has(Auth.self) else { throw HTTPError(.unauthorized) }
         return try await next(request, context)
     }
