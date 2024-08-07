@@ -22,6 +22,11 @@ let package = Package(
         .target(name: "HummingbirdAuth", dependencies: [
             .product(name: "Hummingbird", package: "hummingbird"),
         ]),
+        .target(name: "HummingbirdBasicAuth", dependencies: [
+            .byName(name: "Bcrypt"),
+            .byName(name: "HummingbirdAuth"),
+            .product(name: "Hummingbird", package: "hummingbird"),
+        ]),
         .target(name: "Bcrypt", dependencies: [
             .byName(name: "CBcrypt"),
         ]),
