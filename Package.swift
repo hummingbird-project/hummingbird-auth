@@ -40,8 +40,9 @@ let package = Package(
         ]),
         .target(name: "CBcrypt", dependencies: []),
         .testTarget(name: "HummingbirdAuthTests", dependencies: [
-            .byName(name: "HummingbirdAuth"),
             .byName(name: "Bcrypt"),
+            .byName(name: "HummingbirdAuth"),
+            .byName(name: "HummingbirdBasicAuth"),
             .byName(name: "OTP"),
             .byName(name: "HummingbirdAuthTesting"),
             .product(name: "HummingbirdTesting", package: "hummingbird"),

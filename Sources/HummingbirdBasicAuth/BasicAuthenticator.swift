@@ -18,13 +18,13 @@ import HummingbirdAuth
 import NIOPosix
 
 /// Protocol for user extracted from Storage
-protocol BasicUser: Authenticatable {
+public protocol BasicUser: Authenticatable {
     var username: String { get }
     var passwordHash: String? { get }
 }
 
 /// Protocol for User storage
-protocol UserRepository: Sendable {
+public protocol UserRepository: Sendable {
     associatedtype User: BasicUser
 
     func getUser(named name: String) async throws -> User?
@@ -33,10 +33,14 @@ protocol UserRepository: Sendable {
 /// Basic password authenticator
 ///
 /// Extract username and password from "Authorization" header and checks user exists and that the password is correct
-struct BasicAuthenticator<Context: AuthRequestContext, Repository: UserRepository>: AuthenticatorMiddleware {
+public struct BasicAuthenticator<Context: AuthRequestContext, Repository: UserRepository>: AuthenticatorMiddleware {
     let users: Repository
 
-    func authenticate(request: Request, context: Context) async throws -> Repository.User? {
+    public init(users: Repository) {
+        self.users = users
+    }
+
+    public func authenticate(request: Request, context: Context) async throws -> Repository.User? {
         // does request have basic authentication info in the "Authorization" header
         guard let basic = request.headers.basic else { return nil }
 
