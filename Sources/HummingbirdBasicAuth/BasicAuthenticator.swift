@@ -30,14 +30,25 @@ public protocol UserRepository: Sendable {
     func getUser(named name: String) async throws -> User?
 }
 
+/// Protocol for password verifier
+public protocol PasswordVerifier: Sendable {
+    func verifyPassword(_ text: String, hash: String) async throws -> Bool
+}
+
 /// Basic password authenticator
 ///
 /// Extract username and password from "Authorization" header and checks user exists and that the password is correct
-public struct BasicAuthenticator<Context: AuthRequestContext, Repository: UserRepository>: AuthenticatorMiddleware {
+public struct BasicAuthenticator<Context: AuthRequestContext, Repository: UserRepository, Verifier: PasswordVerifier>: AuthenticatorMiddleware {
     let users: Repository
+    let passwordVerifier: Verifier
 
-    public init(users: Repository) {
+    /// Initialize BasicAuthenticator middleware
+    /// - Parameters:
+    ///   - users: User repository
+    ///   - passwordHasher: password hasher
+    public init(users: Repository, passwordVerififer: Verifier) {
         self.users = users
+        self.passwordVerifier = passwordVerififer
     }
 
     public func authenticate(request: Request, context: Context) async throws -> Repository.User? {
@@ -48,8 +59,8 @@ public struct BasicAuthenticator<Context: AuthRequestContext, Repository: UserRe
         // If it is correct then login in user
         let user = try await users.getUser(named: basic.username)
         guard let user, let passwordHash = user.passwordHash else { return nil }
-        // Do Bcrypt verify on a separate thread to not block the general task executor
-        guard try await NIOThreadPool.singleton.runIfActive({ Bcrypt.verify(basic.password, hash: passwordHash) }) else { return nil }
+        // Verify password hash on a separate thread to not block the general task executor
+        guard try await self.passwordVerifier.verifyPassword(basic.password, hash: passwordHash) else { return nil }
         return user
     }
 }
