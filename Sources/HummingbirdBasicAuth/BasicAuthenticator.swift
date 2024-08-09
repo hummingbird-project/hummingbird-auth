@@ -45,10 +45,10 @@ public struct BasicAuthenticator<Context: AuthRequestContext, Repository: UserRe
     /// Initialize BasicAuthenticator middleware
     /// - Parameters:
     ///   - users: User repository
-    ///   - passwordHasher: password hasher
-    public init(users: Repository, passwordVerififer: Verifier) {
+    ///   - passwordVerifier: password verifier
+    public init(users: Repository, passwordVerifier: Verifier) {
         self.users = users
-        self.passwordVerifier = passwordVerififer
+        self.passwordVerifier = passwordVerifier
     }
 
     public func authenticate(request: Request, context: Context) async throws -> Repository.User? {
