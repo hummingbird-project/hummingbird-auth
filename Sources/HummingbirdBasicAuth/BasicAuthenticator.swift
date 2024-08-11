@@ -42,7 +42,7 @@ public struct BasicAuthenticator<Context: AuthRequestContext, Repository: UserPa
     /// - Parameters:
     ///   - passwordVerifier: password verifier
     ///   - getUser: Closure returning user type
-    public init<User: BasicUser>(
+    public init<User: BasicAuthenticatorUser>(
         passwordVerifier: Verifier,
         getUser: @escaping @Sendable (String) async throws -> User?
     ) where Repository == UserPasswordClosure<User> {

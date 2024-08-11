@@ -15,20 +15,20 @@
 import HummingbirdAuth
 
 /// Protocol for user extracted from Storage
-public protocol BasicUser: Authenticatable {
+public protocol BasicAuthenticatorUser: Authenticatable {
     var username: String { get }
     var passwordHash: String? { get }
 }
 
 /// Protocol for user/password hash storage
 public protocol UserPasswordRepository: Sendable {
-    associatedtype User: BasicUser
+    associatedtype User: BasicAuthenticatorUser
 
     func getUser(named name: String) async throws -> User?
 }
 
 /// Implementation of UserPasswordRepository that uses a closure
-public struct UserPasswordClosure<User>: UserPasswordRepository where User: BasicUser {
+public struct UserPasswordClosure<User>: UserPasswordRepository where User: BasicAuthenticatorUser {
     let getUserClosure: @Sendable (String) async throws -> User?
 
     public func getUser(named name: String) async throws -> User? {

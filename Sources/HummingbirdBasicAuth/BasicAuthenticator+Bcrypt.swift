@@ -37,7 +37,7 @@ extension BasicAuthenticator where Verifier == BcryptPasswordVerifier {
     /// - Parameters:
     ///   - passwordVerifier: password verifier
     ///   - getUser: Closure returning user type
-    public init<User: BasicUser>(
+    public init<User: BasicAuthenticatorUser>(
         getUser: @escaping @Sendable (String) async throws -> User?
     ) where Repository == UserPasswordClosure<User> {
         self.users = UserPasswordClosure(getUserClosure: getUser)

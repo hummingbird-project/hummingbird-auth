@@ -187,7 +187,7 @@ final class AuthTests: XCTestCase {
 
     func testBasicAuthenticator() async throws {
         struct MyUserRepository: UserPasswordRepository {
-            struct User: BasicUser {
+            struct User: BasicAuthenticatorUser {
                 let username: String
                 let passwordHash: String?
             }
@@ -217,7 +217,7 @@ final class AuthTests: XCTestCase {
     }
 
     func testBasicAuthenticatorWithClosure() async throws {
-        struct User: BasicUser {
+        struct User: BasicAuthenticatorUser {
             let username: String
             let passwordHash: String?
         }
