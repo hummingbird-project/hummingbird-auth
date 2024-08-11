@@ -186,7 +186,7 @@ final class AuthTests: XCTestCase {
     }
 
     func testBasicAuthenticator() async throws {
-        struct MyUserRepository: UserRepository {
+        struct MyUserRepository: UserPasswordRepository {
             struct User: BasicUser {
                 let username: String
                 let passwordHash: String?
@@ -202,6 +202,34 @@ final class AuthTests: XCTestCase {
         router.add(middleware: BasicAuthenticator(users: MyUserRepository()))
         router.get { _, context -> String? in
             let user = try context.auth.require(MyUserRepository.User.self)
+            return user.username
+        }
+        let app = Application(responder: router.buildResponder())
+        try await app.test(.router) { client in
+            try await client.execute(uri: "/", method: .get, auth: .basic(username: "admin", password: "password")) { response in
+                let body = try XCTUnwrap(response.body)
+                XCTAssertEqual(String(buffer: body), "admin")
+            }
+            try await client.execute(uri: "/", method: .get, auth: .basic(username: "adam", password: "password")) { response in
+                XCTAssertEqual(response.status, .unauthorized)
+            }
+        }
+    }
+
+    func testBasicAuthenticatorWithClosure() async throws {
+        struct User: BasicUser {
+            let username: String
+            let passwordHash: String?
+        }
+        let users = ["admin": Bcrypt.hash("password", cost: 8)]
+        let router = Router(context: BasicAuthRequestContext.self)
+        router.add(
+            middleware: BasicAuthenticator { username in
+                return users[username].map { User(username: username, passwordHash: $0) }
+            }
+        )
+        router.get { _, context -> String? in
+            let user = try context.auth.require(User.self)
             return user.username
         }
         let app = Application(responder: router.buildResponder())

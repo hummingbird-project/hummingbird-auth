@@ -32,4 +32,15 @@ extension BasicAuthenticator where Verifier == BcryptPasswordVerifier {
         self.users = users
         self.passwordVerifier = BcryptPasswordVerifier()
     }
+
+    /// Initialize BasicAuthenticator middleware
+    /// - Parameters:
+    ///   - passwordVerifier: password verifier
+    ///   - getUser: Closure returning user type
+    public init<User: BasicUser>(
+        getUser: @escaping @Sendable (String) async throws -> User?
+    ) where Repository == UserPasswordClosure<User> {
+        self.users = UserPasswordClosure(getUserClosure: getUser)
+        self.passwordVerifier = BcryptPasswordVerifier()
+    }
 }
