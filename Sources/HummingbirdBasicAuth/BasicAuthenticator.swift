@@ -12,20 +12,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-import Bcrypt
 import Hummingbird
 import HummingbirdAuth
-import NIOPosix
-
-/// Protocol for password verifier
-public protocol PasswordVerifier: Sendable {
-    func verifyPassword(_ text: String, hash: String) async throws -> Bool
-}
 
 /// Basic password authenticator
 ///
 /// Extract username and password from "Authorization" header and checks user exists and that the password is correct
-public struct BasicAuthenticator<Context: AuthRequestContext, Repository: UserPasswordRepository, Verifier: PasswordVerifier>: AuthenticatorMiddleware {
+public struct BasicAuthenticator<Context: AuthRequestContext, Repository: PasswordUserRepository, Verifier: PasswordVerifier>: AuthenticatorMiddleware {
     @usableFromInline
     let users: Repository
     @usableFromInline
@@ -35,7 +28,7 @@ public struct BasicAuthenticator<Context: AuthRequestContext, Repository: UserPa
     /// - Parameters:
     ///   - users: User repository
     ///   - passwordVerifier: password verifier
-    public init(users: Repository, passwordVerifier: Verifier) {
+    public init(users: Repository, passwordVerifier: Verifier = BcryptPasswordVerifier()) {
         self.users = users
         self.passwordVerifier = passwordVerifier
     }
@@ -45,7 +38,7 @@ public struct BasicAuthenticator<Context: AuthRequestContext, Repository: UserPa
     ///   - passwordVerifier: password verifier
     ///   - getUser: Closure returning user type
     public init<User: BasicAuthenticatorUser>(
-        passwordVerifier: Verifier,
+        passwordVerifier: Verifier = BcryptPasswordVerifier(),
         getUser: @escaping @Sendable (String) async throws -> User?
     ) where Repository == UserPasswordClosure<User> {
         self.users = UserPasswordClosure(getUserClosure: getUser)

@@ -21,14 +21,14 @@ public protocol BasicAuthenticatorUser: Authenticatable {
 }
 
 /// Protocol for user/password hash storage
-public protocol UserPasswordRepository: Sendable {
+public protocol PasswordUserRepository: Sendable {
     associatedtype User: BasicAuthenticatorUser
 
     func getUser(named name: String) async throws -> User?
 }
 
 /// Implementation of UserPasswordRepository that uses a closure
-public struct UserPasswordClosure<User>: UserPasswordRepository where User: BasicAuthenticatorUser {
+public struct UserPasswordClosure<User>: PasswordUserRepository where User: BasicAuthenticatorUser {
     @usableFromInline
     let getUserClosure: @Sendable (String) async throws -> User?
 
