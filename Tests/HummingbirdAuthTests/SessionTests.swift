@@ -2,7 +2,7 @@
 //
 // This source file is part of the Hummingbird server framework project
 //
-// Copyright (c) 2021-2022 the Hummingbird authors
+// Copyright (c) 2021-2024 the Hummingbird authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -21,14 +21,55 @@ import XCTest
 
 final class SessionTests: XCTestCase {
     func testSessionAuthenticator() async throws {
+        struct UserRepository: SessionUserRepository {
+            struct User: Authenticatable {
+                let name: String
+            }
+
+            typealias UserID = Int
+
+            static let testSessionId = 89
+
+            func getUser(from id: UserID, context: BasicAuthRequestContext) async throws -> User? {
+                let user = self.users[id]
+                return user
+            }
+
+            let users = [Self.testSessionId: User(name: "Adam")]
+        }
+
+        let router = Router(context: BasicAuthRequestContext.self)
+        let persist = MemoryPersistDriver()
+        let sessions = SessionStorage(persist)
+        router.put("session") { _, _ -> Response in
+            let cookie = try await sessions.save(session: UserRepository.testSessionId, expiresIn: .seconds(300))
+            var response = Response(status: .ok)
+            response.setCookie(cookie)
+            return response
+        }
+        router.group()
+            .add(middleware: SessionAuthenticator(users: UserRepository(), sessionStorage: sessions))
+            .get("session") { _, context -> HTTPResponse.Status in
+                _ = try context.auth.require(UserRepository.User.self)
+                return .ok
+            }
+        let app = Application(responder: router.buildResponder())
+
+        try await app.test(.router) { client in
+            let responseCookies = try await client.execute(uri: "/session", method: .put) { response -> String? in
+                XCTAssertEqual(response.status, .ok)
+                return response.headers[.setCookie]
+            }
+            let cookies = try XCTUnwrap(responseCookies)
+            try await client.execute(uri: "/session", method: .get, headers: [.cookie: cookies]) { response in
+                XCTAssertEqual(response.status, .ok)
+            }
+        }
+    }
+
+    func testSessionAuthenticatorClosure() async throws {
         struct User: Authenticatable {
             let name: String
-        }
-        struct MySessionAuthenticator<Context: AuthRequestContext>: SessionMiddleware {
-            let sessionStorage: SessionStorage
-            func getValue(from session: Int, request: Request, context: Context) async throws -> User? {
-                return User(name: "Adam")
-            }
         }
         let router = Router(context: BasicAuthRequestContext.self)
         let persist = MemoryPersistDriver()
@@ -40,7 +81,11 @@ final class SessionTests: XCTestCase {
             return response
         }
         router.group()
-            .add(middleware: MySessionAuthenticator(sessionStorage: sessions))
+            .add(
+                middleware: SessionAuthenticator(sessionStorage: sessions) { (_: Int, _) in
+                    User(name: "Adam")
+                }
+            )
             .get("session") { _, context -> HTTPResponse.Status in
                 _ = try context.auth.require(User.self)
                 return .ok
