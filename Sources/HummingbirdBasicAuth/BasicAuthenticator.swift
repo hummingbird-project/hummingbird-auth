@@ -26,7 +26,9 @@ public protocol PasswordVerifier: Sendable {
 ///
 /// Extract username and password from "Authorization" header and checks user exists and that the password is correct
 public struct BasicAuthenticator<Context: AuthRequestContext, Repository: UserPasswordRepository, Verifier: PasswordVerifier>: AuthenticatorMiddleware {
+    @usableFromInline
     let users: Repository
+    @usableFromInline
     let passwordVerifier: Verifier
 
     /// Initialize BasicAuthenticator middleware
@@ -50,6 +52,7 @@ public struct BasicAuthenticator<Context: AuthRequestContext, Repository: UserPa
         self.passwordVerifier = passwordVerifier
     }
 
+    @inlinable
     public func authenticate(request: Request, context: Context) async throws -> Repository.User? {
         // does request have basic authentication info in the "Authorization" header
         guard let basic = request.headers.basic else { return nil }

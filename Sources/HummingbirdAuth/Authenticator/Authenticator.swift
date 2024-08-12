@@ -68,6 +68,7 @@ public protocol AuthenticatorMiddleware: RouterMiddleware where Context: AuthReq
 
 extension AuthenticatorMiddleware {
     /// Calls `authenticate` and if it returns a valid authenticatable object `login` with this object
+    @inlinable
     public func handle(_ request: Request, context: Context, next: (Request, Context) async throws -> Response) async throws -> Response {
         if let authenticated = try await authenticate(request: request, context: context) {
             var context = context

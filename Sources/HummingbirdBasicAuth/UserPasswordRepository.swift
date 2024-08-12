@@ -29,8 +29,10 @@ public protocol UserPasswordRepository: Sendable {
 
 /// Implementation of UserPasswordRepository that uses a closure
 public struct UserPasswordClosure<User>: UserPasswordRepository where User: BasicAuthenticatorUser {
+    @usableFromInline
     let getUserClosure: @Sendable (String) async throws -> User?
 
+    @inlinable
     public func getUser(named name: String) async throws -> User? {
         try await self.getUserClosure(name)
     }

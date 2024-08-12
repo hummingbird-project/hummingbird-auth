@@ -15,30 +15,35 @@
 import Hummingbird
 
 public struct LoginCache: Sendable {
+    @inlinable
     public init() {
         self.cache = [:]
     }
 
     /// Login with authenticatable object. Add object to cache
     /// - Parameter auth: authentication details
+    @inlinable
     public mutating func login<Auth: Authenticatable>(_ auth: Auth) {
         self.cache[ObjectIdentifier(Auth.self)] = auth
     }
 
     /// Logout authenticatable object. Removes object from cache
     /// - Parameter auth: authentication type
+    @inlinable
     public mutating func logout<Auth: Authenticatable>(_: Auth.Type) {
         self.cache[ObjectIdentifier(Auth.self)] = nil
     }
 
     /// Return authenticated type
     /// - Parameter auth: Type required
+    @inlinable
     public func get<Auth: Authenticatable>(_: Auth.Type) -> Auth? {
         return self.cache[ObjectIdentifier(Auth.self)] as? Auth
     }
 
     /// Require authenticated type
     /// - Parameter auth: Type required
+    @inlinable
     public func require<Auth: Authenticatable>(_: Auth.Type) throws -> Auth {
         guard let auth = get(Auth.self) else {
             throw HTTPError(.unauthorized)
@@ -48,9 +53,11 @@ public struct LoginCache: Sendable {
 
     /// Return if cache is authenticated with type
     /// - Parameter auth: Authentication type
+    @inlinable
     public func has<Auth: Authenticatable>(_: Auth.Type) -> Bool {
         return self.cache[ObjectIdentifier(Auth.self)] != nil
     }
 
+    @usableFromInline
     var cache: [ObjectIdentifier: Authenticatable]
 }

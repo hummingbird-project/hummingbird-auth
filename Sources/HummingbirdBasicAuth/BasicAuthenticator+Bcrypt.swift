@@ -17,6 +17,7 @@ import NIOPosix
 
 /// Bcrypt password verifier
 public struct BcryptPasswordVerifier: PasswordVerifier {
+    @inlinable
     public func verifyPassword(_ text: String, hash: String) async throws -> Bool {
         try await NIOThreadPool.singleton.runIfActive {
             Bcrypt.verify(text, hash: hash)
