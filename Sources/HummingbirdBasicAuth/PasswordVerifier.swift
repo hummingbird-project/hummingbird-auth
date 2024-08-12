@@ -16,18 +16,18 @@ import Bcrypt
 import NIOPosix
 
 /// Protocol for password verifier
-public protocol PasswordVerifier: Sendable {
-    func verifyPassword(_ text: String, hash: String) async throws -> Bool
+public protocol PasswordHashVerifier: Sendable {
+    func verifyPassword(_ password: String, createsHash hash: String) async throws -> Bool
 }
 
 /// Bcrypt password verifier
-public struct BcryptPasswordVerifier: PasswordVerifier {
+public struct BcryptPasswordVerifier: PasswordHashVerifier {
     public init() {}
 
     @inlinable
-    public func verifyPassword(_ text: String, hash: String) async throws -> Bool {
+    public func verifyPassword(_ password: String, createsHash hash: String) async throws -> Bool {
         try await NIOThreadPool.singleton.runIfActive {
-            Bcrypt.verify(text, hash: hash)
+            Bcrypt.verify(password, hash: hash)
         }
     }
 }

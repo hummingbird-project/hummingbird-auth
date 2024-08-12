@@ -18,19 +18,17 @@ import HummingbirdAuth
 /// Basic password authenticator
 ///
 /// Extract username and password from "Authorization" header and checks user exists and that the password is correct
-public struct BasicAuthenticator<Context: AuthRequestContext, Repository: PasswordUserRepository, Verifier: PasswordVerifier>: AuthenticatorMiddleware {
-    @usableFromInline
-    let users: Repository
-    @usableFromInline
-    let passwordVerifier: Verifier
+public struct BasicAuthenticator<Context: AuthRequestContext, Repository: PasswordUserRepository, Verifier: PasswordHashVerifier>: AuthenticatorMiddleware {
+    public let users: Repository
+    public let passwordHashVerifier: Verifier
 
     /// Initialize BasicAuthenticator middleware
     /// - Parameters:
     ///   - users: User repository
     ///   - passwordVerifier: password verifier
-    public init(users: Repository, passwordVerifier: Verifier = BcryptPasswordVerifier()) {
+    public init(users: Repository, passwordHashVerifier: Verifier = BcryptPasswordVerifier()) {
         self.users = users
-        self.passwordVerifier = passwordVerifier
+        self.passwordHashVerifier = passwordHashVerifier
     }
 
     /// Initialize BasicAuthenticator middleware
@@ -42,7 +40,7 @@ public struct BasicAuthenticator<Context: AuthRequestContext, Repository: Passwo
         getUser: @escaping @Sendable (String) async throws -> User?
     ) where Repository == UserPasswordClosure<User> {
         self.users = UserPasswordClosure(getUserClosure: getUser)
-        self.passwordVerifier = passwordVerifier
+        self.passwordHashVerifier = passwordVerifier
     }
 
     @inlinable
@@ -55,7 +53,7 @@ public struct BasicAuthenticator<Context: AuthRequestContext, Repository: Passwo
         let user = try await users.getUser(named: basic.username)
         guard let user, let passwordHash = user.passwordHash else { return nil }
         // Verify password hash on a separate thread to not block the general task executor
-        guard try await self.passwordVerifier.verifyPassword(basic.password, hash: passwordHash) else { return nil }
+        guard try await self.passwordHashVerifier.verifyPassword(basic.password, createsHash: passwordHash) else { return nil }
         return user
     }
 }
