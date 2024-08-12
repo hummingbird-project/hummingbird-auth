@@ -24,8 +24,10 @@ public protocol SessionUserRepository: Sendable {
 
 /// Implementation of SessionUserRepository that uses a closure
 public struct UserSessionClosure<UserID: Codable, Context: RequestContext & AuthRequestContext, User: Authenticatable>: SessionUserRepository {
+    @usableFromInline
     let getUserClosure: @Sendable (UserID, Context) async throws -> User?
 
+    @inlinable
     public func getUser(from id: UserID, context: Context) async throws -> User? {
         try await self.getUserClosure(id, context)
     }
@@ -33,9 +35,11 @@ public struct UserSessionClosure<UserID: Codable, Context: RequestContext & Auth
 
 /// Session authenticator
 public struct SessionAuthenticator<Context: RequestContext & AuthRequestContext, Repository: SessionUserRepository>: AuthenticatorMiddleware where Context == Repository.Context {
+    @usableFromInline
     let users: Repository
 
     /// container for session objects
+    @usableFromInline
     let sessionStorage: SessionStorage
 
     /// Initialize SessionAuthenticator middleware
@@ -59,6 +63,7 @@ public struct SessionAuthenticator<Context: RequestContext & AuthRequestContext,
         self.sessionStorage = sessionStorage
     }
 
+    @inlinable
     public func authenticate(request: Request, context: Context) async throws -> Repository.User? {
         guard let session: Repository.UserID = try await self.sessionStorage.load(request: request) else { return nil }
         return try await self.users.getUser(from: session, context: context)
