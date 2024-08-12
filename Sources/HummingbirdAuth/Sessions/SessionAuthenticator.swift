@@ -35,12 +35,11 @@ public struct UserSessionClosure<Session: Codable, Context: RequestContext & Aut
 
 /// Session authenticator
 public struct SessionAuthenticator<Context: RequestContext & AuthRequestContext, Repository: SessionUserRepository>: AuthenticatorMiddleware where Context == Repository.Context {
-    @usableFromInline
-    let users: Repository
+    /// User repository
+    public let users: Repository
 
     /// container for session objects
-    @usableFromInline
-    let sessionStorage: SessionStorage
+    public let sessionStorage: SessionStorage
 
     /// Initialize SessionAuthenticator middleware
     /// - Parameters:
