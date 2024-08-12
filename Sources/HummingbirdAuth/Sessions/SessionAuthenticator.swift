@@ -16,19 +16,19 @@ import Hummingbird
 
 public protocol SessionUserRepository: Sendable {
     associatedtype User: Authenticatable
-    associatedtype UserID: Codable
+    associatedtype Session: Codable
     associatedtype Context: RequestContext & AuthRequestContext
 
-    func getUser(from id: UserID, context: Context) async throws -> User?
+    func getUser(from session: Session, context: Context) async throws -> User?
 }
 
 /// Implementation of SessionUserRepository that uses a closure
-public struct UserSessionClosure<UserID: Codable, Context: RequestContext & AuthRequestContext, User: Authenticatable>: SessionUserRepository {
+public struct UserSessionClosure<Session: Codable, Context: RequestContext & AuthRequestContext, User: Authenticatable>: SessionUserRepository {
     @usableFromInline
-    let getUserClosure: @Sendable (UserID, Context) async throws -> User?
+    let getUserClosure: @Sendable (Session, Context) async throws -> User?
 
     @inlinable
-    public func getUser(from id: UserID, context: Context) async throws -> User? {
+    public func getUser(from id: Session, context: Context) async throws -> User? {
         try await self.getUserClosure(id, context)
     }
 }
@@ -65,7 +65,7 @@ public struct SessionAuthenticator<Context: RequestContext & AuthRequestContext,
 
     @inlinable
     public func authenticate(request: Request, context: Context) async throws -> Repository.User? {
-        guard let session: Repository.UserID = try await self.sessionStorage.load(request: request) else { return nil }
+        guard let session: Repository.Session = try await self.sessionStorage.load(request: request) else { return nil }
         return try await self.users.getUser(from: session, context: context)
     }
 }
