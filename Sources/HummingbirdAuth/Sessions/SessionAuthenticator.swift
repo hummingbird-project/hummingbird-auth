@@ -13,28 +13,28 @@
 //===----------------------------------------------------------------------===//
 
 import Hummingbird
+import Logging
 
 public protocol SessionUserRepository: Sendable {
     associatedtype User: Authenticatable
     associatedtype Session: Codable
-    associatedtype Context: RequestContext & AuthRequestContext
 
-    func getUser(from session: Session, context: Context) async throws -> User?
+    func getUser(from session: Session, logger: Logger) async throws -> User?
 }
 
 /// Implementation of SessionUserRepository that uses a closure
-public struct UserSessionClosure<Session: Codable, Context: RequestContext & AuthRequestContext, User: Authenticatable>: SessionUserRepository {
+public struct UserSessionClosure<Session: Codable, User: Authenticatable>: SessionUserRepository {
     @usableFromInline
-    let getUserClosure: @Sendable (Session, Context) async throws -> User?
+    let getUserClosure: @Sendable (Session, Logger) async throws -> User?
 
     @inlinable
-    public func getUser(from id: Session, context: Context) async throws -> User? {
-        try await self.getUserClosure(id, context)
+    public func getUser(from id: Session, logger: Logger) async throws -> User? {
+        try await self.getUserClosure(id, logger)
     }
 }
 
 /// Session authenticator
-public struct SessionAuthenticator<Context: RequestContext & AuthRequestContext, Repository: SessionUserRepository>: AuthenticatorMiddleware where Context == Repository.Context {
+public struct SessionAuthenticator<Context: RequestContext & AuthRequestContext, Repository: SessionUserRepository>: AuthenticatorMiddleware {
     /// User repository
     public let users: Repository
 
@@ -56,8 +56,8 @@ public struct SessionAuthenticator<Context: RequestContext & AuthRequestContext,
     ///   - getUser: Closure returning user type from session id
     public init<Session: Codable, User: Authenticatable>(
         sessionStorage: SessionStorage,
-        getUser: @escaping @Sendable (Session, Context) async throws -> User?
-    ) where Repository == UserSessionClosure<Session, Context, User> {
+        getUser: @escaping @Sendable (Session, Logger) async throws -> User?
+    ) where Repository == UserSessionClosure<Session, User> {
         self.users = UserSessionClosure(getUserClosure: getUser)
         self.sessionStorage = sessionStorage
     }
@@ -65,6 +65,6 @@ public struct SessionAuthenticator<Context: RequestContext & AuthRequestContext,
     @inlinable
     public func authenticate(request: Request, context: Context) async throws -> Repository.User? {
         guard let session: Repository.Session = try await self.sessionStorage.load(request: request) else { return nil }
-        return try await self.users.getUser(from: session, context: context)
+        return try await self.users.getUser(from: session, logger: context.logger)
     }
 }

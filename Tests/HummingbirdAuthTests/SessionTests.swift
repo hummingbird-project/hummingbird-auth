@@ -16,6 +16,7 @@ import Hummingbird
 import HummingbirdAuth
 import HummingbirdAuthTesting
 import HummingbirdTesting
+import Logging
 import NIOPosix
 import XCTest
 
@@ -30,7 +31,7 @@ final class SessionTests: XCTestCase {
 
             static let testSessionId = 89
 
-            func getUser(from id: UserID, context: BasicAuthRequestContext) async throws -> User? {
+            func getUser(from id: UserID, logger: Logger) async throws -> User? {
                 let user = self.users[id]
                 return user
             }
