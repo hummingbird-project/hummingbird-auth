@@ -14,10 +14,10 @@
 
 import Hummingbird
 
-public protocol SessionUserRepository: Sendable {
-    associatedtype User: Authenticatable
+public protocol SessionUserRepository<Session, Context, User>: Sendable {
     associatedtype Session: Codable
     associatedtype Context: RequestContext & AuthRequestContext
+    associatedtype User: Authenticatable
 
     func getUser(from session: Session, context: Context) async throws -> User?
 }
