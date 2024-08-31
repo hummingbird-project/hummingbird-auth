@@ -18,6 +18,7 @@ import HummingbirdAuth
 import HummingbirdAuthTesting
 import HummingbirdBasicAuth
 import HummingbirdTesting
+import Logging
 import NIOPosix
 import XCTest
 
@@ -192,7 +193,7 @@ final class AuthTests: XCTestCase {
                 let passwordHash: String?
             }
 
-            func getUser(named username: String) -> User? {
+            func getUser(named username: String, logger: Logger) -> User? {
                 return self.users[username].map { .init(username: username, passwordHash: $0) }
             }
 
@@ -224,7 +225,7 @@ final class AuthTests: XCTestCase {
         let users = ["admin": Bcrypt.hash("password", cost: 8)]
         let router = Router(context: BasicAuthRequestContext.self)
         router.add(
-            middleware: BasicAuthenticator { username in
+            middleware: BasicAuthenticator { username, _ in
                 return users[username].map { User(username: username, passwordHash: $0) }
             }
         )

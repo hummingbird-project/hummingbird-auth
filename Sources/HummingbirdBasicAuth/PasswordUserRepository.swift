@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 import HummingbirdAuth
+import Logging
 
 /// Protocol for user extracted from Storage
 public protocol BasicAuthenticatorUser: Authenticatable {
@@ -24,16 +25,16 @@ public protocol BasicAuthenticatorUser: Authenticatable {
 public protocol PasswordUserRepository: Sendable {
     associatedtype User: BasicAuthenticatorUser
 
-    func getUser(named name: String) async throws -> User?
+    func getUser(named name: String, logger: Logger) async throws -> User?
 }
 
 /// Implementation of UserPasswordRepository that uses a closure
 public struct UserPasswordClosure<User>: PasswordUserRepository where User: BasicAuthenticatorUser {
     @usableFromInline
-    let getUserClosure: @Sendable (String) async throws -> User?
+    let getUserClosure: @Sendable (String, Logger) async throws -> User?
 
     @inlinable
-    public func getUser(named name: String) async throws -> User? {
-        try await self.getUserClosure(name)
+    public func getUser(named name: String, logger: Logger) async throws -> User? {
+        try await self.getUserClosure(name, logger)
     }
 }

@@ -14,6 +14,7 @@
 
 import Hummingbird
 import HummingbirdAuth
+import Logging
 
 /// Basic password authenticator
 ///
@@ -37,7 +38,7 @@ public struct BasicAuthenticator<Context: AuthRequestContext, Repository: Passwo
     ///   - getUser: Closure returning user type
     public init<User: BasicAuthenticatorUser>(
         passwordVerifier: Verifier = BcryptPasswordVerifier(),
-        getUser: @escaping @Sendable (String) async throws -> User?
+        getUser: @escaping @Sendable (String, Logger) async throws -> User?
     ) where Repository == UserPasswordClosure<User> {
         self.users = UserPasswordClosure(getUserClosure: getUser)
         self.passwordHashVerifier = passwordVerifier
@@ -50,7 +51,7 @@ public struct BasicAuthenticator<Context: AuthRequestContext, Repository: Passwo
 
         // check if user exists and then verify the entered password against the one stored in the database.
         // If it is correct then login in user
-        let user = try await users.getUser(named: basic.username)
+        let user = try await users.getUser(named: basic.username, logger: context.logger)
         guard let user, let passwordHash = user.passwordHash else { return nil }
         // Verify password hash on a separate thread to not block the general task executor
         guard try await self.passwordHashVerifier.verifyPassword(basic.password, createsHash: passwordHash) else { return nil }
