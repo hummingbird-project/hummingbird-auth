@@ -30,7 +30,7 @@ final class SessionTests: XCTestCase {
 
             static let testSessionId = 89
 
-            func getUser(from id: Identifier, context: BasicAuthRequestContext) async throws -> User? {
+            func getUser(from id: Identifier, context: UserRepositoryContext) async throws -> User? {
                 let user = self.users[id]
                 return user
             }

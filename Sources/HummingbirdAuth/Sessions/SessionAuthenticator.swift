@@ -15,7 +15,7 @@
 import Hummingbird
 
 /// Session authenticator
-public struct SessionAuthenticator<Context: RequestContext & AuthRequestContext, Repository: UserRepository>: AuthenticatorMiddleware where Context == Repository.Context {
+public struct SessionAuthenticator<Context: RequestContext & AuthRequestContext, Repository: UserRepository>: AuthenticatorMiddleware {
     /// User repository
     public let users: Repository
 
@@ -37,8 +37,8 @@ public struct SessionAuthenticator<Context: RequestContext & AuthRequestContext,
     ///   - getUser: Closure returning user type from session id
     public init<Session: Codable, User: Authenticatable>(
         sessionStorage: SessionStorage,
-        getUser: @escaping @Sendable (Session, Context) async throws -> User?
-    ) where Repository == UserClosureRepository<Session, User, Context> {
+        getUser: @escaping @Sendable (Session, UserRepositoryContext) async throws -> User?
+    ) where Repository == UserClosureRepository<Session, User> {
         self.users = UserClosureRepository(getUser)
         self.sessionStorage = sessionStorage
     }
@@ -46,6 +46,6 @@ public struct SessionAuthenticator<Context: RequestContext & AuthRequestContext,
     @inlinable
     public func authenticate(request: Request, context: Context) async throws -> Repository.User? {
         guard let id: Repository.Identifier = try await self.sessionStorage.load(request: request) else { return nil }
-        return try await self.users.getUser(from: id, context: context)
+        return try await self.users.getUser(from: id, context: .init(logger: context.logger))
     }
 }

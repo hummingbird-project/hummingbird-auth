@@ -13,11 +13,20 @@
 //===----------------------------------------------------------------------===//
 
 import Hummingbird
+import Logging
+
+/// Context object supplied when requesting user
+public struct UserRepositoryContext {
+    public let logger: Logger
+
+    public init(logger: Logger) {
+        self.logger = logger
+    }
+}
 
 /// Repository of users identified by an id
-public protocol UserRepository<Identifier, User, Context>: Sendable {
+public protocol UserRepository<Identifier, User>: Sendable {
     associatedtype Identifier: Codable
-    associatedtype Context: AuthRequestContext
     associatedtype User: Authenticatable
 
     ///  Get user from repository
@@ -25,20 +34,20 @@ public protocol UserRepository<Identifier, User, Context>: Sendable {
     ///   - id: User ID
     ///   - context: Request context
     /// - Returns: User if there is one associated with supplied id
-    func getUser(from id: Identifier, context: Context) async throws -> User?
+    func getUser(from id: Identifier, context: UserRepositoryContext) async throws -> User?
 }
 
 /// Implementation of UserRepository that uses a closure
-public struct UserClosureRepository<Identifier: Codable, User: Authenticatable, Context: AuthRequestContext>: UserRepository {
+public struct UserClosureRepository<Identifier: Codable, User: Authenticatable>: UserRepository {
     @usableFromInline
-    let getUserClosure: @Sendable (Identifier, Context) async throws -> User?
+    let getUserClosure: @Sendable (Identifier, UserRepositoryContext) async throws -> User?
 
-    public init(_ getUserClosure: @escaping @Sendable (Identifier, Context) async throws -> User?) {
+    public init(_ getUserClosure: @escaping @Sendable (Identifier, UserRepositoryContext) async throws -> User?) {
         self.getUserClosure = getUserClosure
     }
 
     @inlinable
-    public func getUser(from id: Identifier, context: Context) async throws -> User? {
+    public func getUser(from id: Identifier, context: UserRepositoryContext) async throws -> User? {
         try await self.getUserClosure(id, context)
     }
 }

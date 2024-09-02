@@ -23,7 +23,7 @@ public protocol PasswordAuthenticatable: Authenticatable {
 /// Basic password authenticator
 ///
 /// Extract username and password from "Authorization" header and checks user exists and that the password is correct
-public struct BasicAuthenticator<Context: AuthRequestContext, Repository: UserRepository, Verifier: PasswordHashVerifier>: AuthenticatorMiddleware where Repository.Identifier == String, Repository.Context == Context, Repository.User: PasswordAuthenticatable {
+public struct BasicAuthenticator<Context: AuthRequestContext, Repository: UserRepository, Verifier: PasswordHashVerifier>: AuthenticatorMiddleware where Repository.Identifier == String, Repository.User: PasswordAuthenticatable {
     public let users: Repository
     public let passwordHashVerifier: Verifier
 
@@ -42,8 +42,8 @@ public struct BasicAuthenticator<Context: AuthRequestContext, Repository: UserRe
     ///   - getUser: Closure returning user type
     public init<User: PasswordAuthenticatable>(
         passwordVerifier: Verifier = BcryptPasswordVerifier(),
-        getUser: @escaping @Sendable (String, Context) async throws -> User?
-    ) where Repository == UserClosureRepository<String, User, Context> {
+        getUser: @escaping @Sendable (String, UserRepositoryContext) async throws -> User?
+    ) where Repository == UserClosureRepository<String, User> {
         self.users = .init(getUser)
         self.passwordHashVerifier = passwordVerifier
     }
@@ -55,7 +55,7 @@ public struct BasicAuthenticator<Context: AuthRequestContext, Repository: UserRe
 
         // check if user exists and then verify the entered password against the one stored in the database.
         // If it is correct then login in user
-        let user = try await users.getUser(from: basic.username, context: context)
+        let user = try await users.getUser(from: basic.username, context: .init(logger: context.logger))
         guard let user, let passwordHash = user.passwordHash else { return nil }
         // Verify password hash on a separate thread to not block the general task executor
         guard try await self.passwordHashVerifier.verifyPassword(basic.password, createsHash: passwordHash) else { return nil }

@@ -192,7 +192,7 @@ final class AuthTests: XCTestCase {
                 let passwordHash: String?
             }
 
-            func getUser(from username: String, context: BasicAuthRequestContext) -> User? {
+            func getUser(from username: String, context: UserRepositoryContext) -> User? {
                 return self.users[username].map { .init(username: username, passwordHash: $0) }
             }
 
