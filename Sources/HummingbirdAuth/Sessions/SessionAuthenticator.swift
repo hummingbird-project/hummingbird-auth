@@ -14,27 +14,8 @@
 
 import Hummingbird
 
-public protocol SessionUserRepository<Session, Context, User>: Sendable {
-    associatedtype Session: Codable
-    associatedtype Context: RequestContext & AuthRequestContext
-    associatedtype User: Authenticatable
-
-    func getUser(from session: Session, context: Context) async throws -> User?
-}
-
-/// Implementation of SessionUserRepository that uses a closure
-public struct UserSessionClosure<Session: Codable, Context: RequestContext & AuthRequestContext, User: Authenticatable>: SessionUserRepository {
-    @usableFromInline
-    let getUserClosure: @Sendable (Session, Context) async throws -> User?
-
-    @inlinable
-    public func getUser(from id: Session, context: Context) async throws -> User? {
-        try await self.getUserClosure(id, context)
-    }
-}
-
 /// Session authenticator
-public struct SessionAuthenticator<Context: RequestContext & AuthRequestContext, Repository: SessionUserRepository>: AuthenticatorMiddleware where Context == Repository.Context {
+public struct SessionAuthenticator<Context: RequestContext & AuthRequestContext, Repository: UserRepository>: AuthenticatorMiddleware where Context == Repository.Context {
     /// User repository
     public let users: Repository
 
@@ -57,14 +38,14 @@ public struct SessionAuthenticator<Context: RequestContext & AuthRequestContext,
     public init<Session: Codable, User: Authenticatable>(
         sessionStorage: SessionStorage,
         getUser: @escaping @Sendable (Session, Context) async throws -> User?
-    ) where Repository == UserSessionClosure<Session, Context, User> {
-        self.users = UserSessionClosure(getUserClosure: getUser)
+    ) where Repository == UserClosureRepository<Session, User, Context> {
+        self.users = UserClosureRepository(getUser)
         self.sessionStorage = sessionStorage
     }
 
     @inlinable
     public func authenticate(request: Request, context: Context) async throws -> Repository.User? {
-        guard let session: Repository.Session = try await self.sessionStorage.load(request: request) else { return nil }
-        return try await self.users.getUser(from: session, context: context)
+        guard let id: Repository.Identifier = try await self.sessionStorage.load(request: request) else { return nil }
+        return try await self.users.getUser(from: id, context: context)
     }
 }

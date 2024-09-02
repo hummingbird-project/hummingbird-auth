@@ -18,7 +18,7 @@ import NIOCore
 
 /// Protocol that all request contexts should conform to if they want to support
 /// authentication middleware
-public protocol AuthRequestContext {
+public protocol AuthRequestContext: RequestContext {
     /// Login cache
     var auth: LoginCache { get set }
 }
