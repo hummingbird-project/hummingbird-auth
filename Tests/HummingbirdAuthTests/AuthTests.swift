@@ -186,13 +186,13 @@ final class AuthTests: XCTestCase {
     }
 
     func testBasicAuthenticator() async throws {
-        struct MyUserRepository: UserRepository {
+        struct MyUserRepository: UserPasswordRepository {
             struct User: PasswordAuthenticatable {
                 let username: String
                 let passwordHash: String?
             }
 
-            func getUser(from username: String, context: UserRepositoryContext) -> User? {
+            func getUser(named username: String, context: UserRepositoryContext) -> User? {
                 return self.users[username].map { .init(username: username, passwordHash: $0) }
             }
 

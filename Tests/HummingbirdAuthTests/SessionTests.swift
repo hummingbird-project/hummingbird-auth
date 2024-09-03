@@ -21,7 +21,7 @@ import XCTest
 
 final class SessionTests: XCTestCase {
     func testSessionAuthenticator() async throws {
-        struct TestUserRepository: UserRepository {
+        struct TestUserRepository: UserSessionRepository {
             struct User: Authenticatable {
                 let name: String
             }
