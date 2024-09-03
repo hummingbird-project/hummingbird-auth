@@ -37,6 +37,7 @@ public struct SessionAuthenticator<Context: AuthRequestContext, Repository: User
     ///   - getUser: Closure returning user type from session id
     public init<Session: Codable, User: Authenticatable>(
         sessionStorage: SessionStorage,
+        context: Context.Type = Context.self,
         getUser: @escaping @Sendable (Session, UserRepositoryContext) async throws -> User?
     ) where Repository == UserSessionClosureRepository<Session, User> {
         self.users = UserSessionClosureRepository(getUser)
