@@ -16,6 +16,11 @@ import Hummingbird
 import HummingbirdAuth
 import Logging
 
+/// Protocol for password autheticatable object
+public protocol PasswordAuthenticatable: Authenticatable {
+    var passwordHash: String? { get }
+}
+
 /// Repository of users identified by an id
 public protocol UserPasswordRepository<User>: Sendable {
     associatedtype User: PasswordAuthenticatable
@@ -42,3 +47,8 @@ public struct UserPasswordClosureRepository<User: PasswordAuthenticatable>: User
         try await self.getUserClosure(username, context)
     }
 }
+
+@_documentation(visibility: internal) @available(*, deprecated, renamed: "UserPasswordRepository")
+public typealias PasswordUserRepository = UserPasswordRepository
+@_documentation(visibility: internal) @available(*, deprecated, renamed: "PasswordAuthenticatable")
+public typealias BasicAuthenticatorUser = PasswordAuthenticatable
