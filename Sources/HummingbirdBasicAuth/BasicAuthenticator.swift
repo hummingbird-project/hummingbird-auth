@@ -15,11 +15,6 @@
 import Hummingbird
 import HummingbirdAuth
 
-/// Protocol for password autheticatable object
-public protocol PasswordAuthenticatable: Authenticatable {
-    var passwordHash: String? { get }
-}
-
 /// Basic password authenticator
 ///
 /// Extract username and password from "Authorization" header and checks user exists and that the password is correct
