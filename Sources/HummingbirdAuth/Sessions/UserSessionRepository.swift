@@ -19,12 +19,12 @@ import Logging
 public struct UserRepositoryContext {
     public let logger: Logger
 
-    public init(logger: Logger) {
+    package init(logger: Logger) {
         self.logger = logger
     }
 }
 
-/// Repository of users identified by an id
+/// Repository of users identified by a session object
 public protocol UserSessionRepository<Identifier, User>: Sendable {
     associatedtype Identifier: Codable
     associatedtype User: Authenticatable
