@@ -186,13 +186,13 @@ final class AuthTests: XCTestCase {
     }
 
     func testBasicAuthenticator() async throws {
-        struct MyUserRepository: PasswordUserRepository {
-            struct User: BasicAuthenticatorUser {
+        struct MyUserRepository: UserPasswordRepository {
+            struct User: PasswordAuthenticatable {
                 let username: String
                 let passwordHash: String?
             }
 
-            func getUser(named username: String) -> User? {
+            func getUser(named username: String, context: UserRepositoryContext) -> User? {
                 return self.users[username].map { .init(username: username, passwordHash: $0) }
             }
 
@@ -217,14 +217,14 @@ final class AuthTests: XCTestCase {
     }
 
     func testBasicAuthenticatorWithClosure() async throws {
-        struct User: BasicAuthenticatorUser {
+        struct User: PasswordAuthenticatable {
             let username: String
             let passwordHash: String?
         }
         let users = ["admin": Bcrypt.hash("password", cost: 8)]
         let router = Router(context: BasicAuthRequestContext.self)
         router.add(
-            middleware: BasicAuthenticator { username in
+            middleware: BasicAuthenticator { username, _ in
                 return users[username].map { User(username: username, passwordHash: $0) }
             }
         )

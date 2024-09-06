@@ -18,7 +18,7 @@ import HummingbirdAuth
 /// Basic password authenticator
 ///
 /// Extract username and password from "Authorization" header and checks user exists and that the password is correct
-public struct BasicAuthenticator<Context: AuthRequestContext, Repository: PasswordUserRepository, Verifier: PasswordHashVerifier>: AuthenticatorMiddleware {
+public struct BasicAuthenticator<Context: AuthRequestContext, Repository: UserPasswordRepository, Verifier: PasswordHashVerifier>: AuthenticatorMiddleware {
     public let users: Repository
     public let passwordHashVerifier: Verifier
 
@@ -26,7 +26,7 @@ public struct BasicAuthenticator<Context: AuthRequestContext, Repository: Passwo
     /// - Parameters:
     ///   - users: User repository
     ///   - passwordVerifier: password verifier
-    public init(users: Repository, passwordHashVerifier: Verifier = BcryptPasswordVerifier()) {
+    public init(users: Repository, passwordHashVerifier: Verifier = BcryptPasswordVerifier(), context: Context.Type = Context.self) {
         self.users = users
         self.passwordHashVerifier = passwordHashVerifier
     }
@@ -35,11 +35,12 @@ public struct BasicAuthenticator<Context: AuthRequestContext, Repository: Passwo
     /// - Parameters:
     ///   - passwordVerifier: password verifier
     ///   - getUser: Closure returning user type
-    public init<User: BasicAuthenticatorUser>(
+    public init<User: PasswordAuthenticatable>(
         passwordVerifier: Verifier = BcryptPasswordVerifier(),
-        getUser: @escaping @Sendable (String) async throws -> User?
-    ) where Repository == UserPasswordClosure<User> {
-        self.users = UserPasswordClosure(getUserClosure: getUser)
+        context: Context.Type = Context.self,
+        getUser: @escaping @Sendable (String, UserRepositoryContext) async throws -> User?
+    ) where Repository == UserPasswordClosureRepository<User> {
+        self.users = .init(getUser)
         self.passwordHashVerifier = passwordVerifier
     }
 
@@ -50,7 +51,7 @@ public struct BasicAuthenticator<Context: AuthRequestContext, Repository: Passwo
 
         // check if user exists and then verify the entered password against the one stored in the database.
         // If it is correct then login in user
-        let user = try await users.getUser(named: basic.username)
+        let user = try await users.getUser(named: basic.username, context: .init(logger: context.logger))
         guard let user, let passwordHash = user.passwordHash else { return nil }
         // Verify password hash on a separate thread to not block the general task executor
         guard try await self.passwordHashVerifier.verifyPassword(basic.password, createsHash: passwordHash) else { return nil }

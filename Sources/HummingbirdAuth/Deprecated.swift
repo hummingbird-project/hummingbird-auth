@@ -30,3 +30,6 @@ public typealias HBAuthenticator = AuthenticatorMiddleware
 public typealias HBSessionAuthenticator = SessionAuthenticator
 @_documentation(visibility: internal) @available(*, unavailable, renamed: "SessionStorage")
 public typealias HBSessionStorage = SessionStorage
+
+@_documentation(visibility: internal) @available(*, deprecated, renamed: "UserSessionRepository")
+public typealias SessionUserRepository = UserSessionRepository

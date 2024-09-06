@@ -21,16 +21,16 @@ import XCTest
 
 final class SessionTests: XCTestCase {
     func testSessionAuthenticator() async throws {
-        struct UserRepository: SessionUserRepository {
+        struct TestUserRepository: UserSessionRepository {
             struct User: Authenticatable {
                 let name: String
             }
 
-            typealias UserID = Int
+            typealias Identifier = Int
 
             static let testSessionId = 89
 
-            func getUser(from id: UserID, context: BasicAuthRequestContext) async throws -> User? {
+            func getUser(from id: Identifier, context: UserRepositoryContext) async throws -> User? {
                 let user = self.users[id]
                 return user
             }
@@ -42,15 +42,15 @@ final class SessionTests: XCTestCase {
         let persist = MemoryPersistDriver()
         let sessions = SessionStorage(persist)
         router.put("session") { _, _ -> Response in
-            let cookie = try await sessions.save(session: UserRepository.testSessionId, expiresIn: .seconds(300))
+            let cookie = try await sessions.save(session: TestUserRepository.testSessionId, expiresIn: .seconds(300))
             var response = Response(status: .ok)
             response.setCookie(cookie)
             return response
         }
         router.group()
-            .add(middleware: SessionAuthenticator(users: UserRepository(), sessionStorage: sessions))
+            .add(middleware: SessionAuthenticator(users: TestUserRepository(), sessionStorage: sessions))
             .get("session") { _, context -> HTTPResponse.Status in
-                _ = try context.auth.require(UserRepository.User.self)
+                _ = try context.auth.require(TestUserRepository.User.self)
                 return .ok
             }
         let app = Application(responder: router.buildResponder())
