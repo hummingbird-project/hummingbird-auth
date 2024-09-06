@@ -19,6 +19,7 @@ import Logging
 public struct UserRepositoryContext {
     public let logger: Logger
 
+    @usableFromInline
     package init(logger: Logger) {
         self.logger = logger
     }
