@@ -29,6 +29,7 @@ public protocol SessionMiddleware: AuthenticatorMiddleware {
     /// - Parameters:
     ///   - from: session
     ///   - request: request being processed
+    ///   - context: Request context
     /// - Returns: Future holding optional authenticated user
     func getValue(from: Session, request: Request, context: Context) async throws -> Value?
 }

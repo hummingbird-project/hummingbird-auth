@@ -28,34 +28,34 @@ public struct LoginCache: Sendable {
     }
 
     /// Logout authenticatable object. Removes object from cache
-    /// - Parameter auth: authentication type
+    /// - Parameter authenticatedType: authentication type
     @inlinable
-    public mutating func logout<Auth: Authenticatable>(_: Auth.Type) {
-        self.cache[ObjectIdentifier(Auth.self)] = nil
+    public mutating func logout<Auth: Authenticatable>(_ authenticatedType: Auth.Type) {
+        self.cache[ObjectIdentifier(authenticatedType)] = nil
     }
 
     /// Return authenticated type
-    /// - Parameter auth: Type required
+    /// - Parameter authenticatedType: Type required
     @inlinable
-    public func get<Auth: Authenticatable>(_: Auth.Type) -> Auth? {
-        return self.cache[ObjectIdentifier(Auth.self)] as? Auth
+    public func get<Auth: Authenticatable>(_ authenticatedType: Auth.Type) -> Auth? {
+        return self.cache[ObjectIdentifier(authenticatedType)] as? Auth
     }
 
     /// Require authenticated type
-    /// - Parameter auth: Type required
+    /// - Parameter authenticatedType: Type required
     @inlinable
-    public func require<Auth: Authenticatable>(_: Auth.Type) throws -> Auth {
-        guard let auth = get(Auth.self) else {
+    public func require<Auth: Authenticatable>(_ authenticatedType: Auth.Type) throws -> Auth {
+        guard let auth = get(authenticatedType) else {
             throw HTTPError(.unauthorized)
         }
         return auth
     }
 
     /// Return if cache is authenticated with type
-    /// - Parameter auth: Authentication type
+    /// - Parameter authenticatedType: Authentication type
     @inlinable
-    public func has<Auth: Authenticatable>(_: Auth.Type) -> Bool {
-        return self.cache[ObjectIdentifier(Auth.self)] != nil
+    public func has<Auth: Authenticatable>(_ authenticatedType: Auth.Type) -> Bool {
+        return self.cache[ObjectIdentifier(authenticatedType)] != nil
     }
 
     @usableFromInline
