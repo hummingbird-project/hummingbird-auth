@@ -31,21 +31,21 @@ public struct LoginCache: Sendable {
     /// - Parameter authenticatedType: authentication type
     @inlinable
     public mutating func logout<Auth: Authenticatable>(_ authenticatedType: Auth.Type) {
-        self.cache[ObjectIdentifier(authenticatedType)] = nil
+        self.cache[ObjectIdentifier(Auth.self)] = nil
     }
 
     /// Return authenticated type
     /// - Parameter authenticatedType: Type required
     @inlinable
     public func get<Auth: Authenticatable>(_ authenticatedType: Auth.Type) -> Auth? {
-        return self.cache[ObjectIdentifier(authenticatedType)] as? Auth
+        return self.cache[ObjectIdentifier(Auth.self)] as? Auth
     }
 
     /// Require authenticated type
     /// - Parameter authenticatedType: Type required
     @inlinable
     public func require<Auth: Authenticatable>(_ authenticatedType: Auth.Type) throws -> Auth {
-        guard let auth = get(authenticatedType) else {
+        guard let auth = get(Auth.self) else {
             throw HTTPError(.unauthorized)
         }
         return auth
@@ -55,7 +55,7 @@ public struct LoginCache: Sendable {
     /// - Parameter authenticatedType: Authentication type
     @inlinable
     public func has<Auth: Authenticatable>(_ authenticatedType: Auth.Type) -> Bool {
-        return self.cache[ObjectIdentifier(authenticatedType)] != nil
+        return self.cache[ObjectIdentifier(Auth.self)] != nil
     }
 
     @usableFromInline
