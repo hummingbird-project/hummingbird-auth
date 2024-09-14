@@ -36,12 +36,12 @@ public struct BasicAuthenticator<Context: AuthRequestContext, Repository: UserPa
     ///   - passwordVerifier: password verifier
     ///   - getUser: Closure returning user type
     public init<User: PasswordAuthenticatable>(
-        passwordVerifier: Verifier = BcryptPasswordVerifier(),
+        passwordHashVerifier: Verifier = BcryptPasswordVerifier(),
         context: Context.Type = Context.self,
         getUser: @escaping @Sendable (String, UserRepositoryContext) async throws -> User?
     ) where Repository == UserPasswordClosureRepository<User> {
         self.users = .init(getUser)
-        self.passwordHashVerifier = passwordVerifier
+        self.passwordHashVerifier = passwordHashVerifier
     }
 
     @inlinable
