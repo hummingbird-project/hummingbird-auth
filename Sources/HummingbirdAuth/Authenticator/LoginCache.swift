@@ -28,21 +28,21 @@ public struct LoginCache: Sendable {
     }
 
     /// Logout authenticatable object. Removes object from cache
-    /// - Parameter authenticatedType: authentication type
+    /// - Parameter : authentication type
     @inlinable
     public mutating func logout<Auth: Authenticatable>(_: Auth.Type) {
         self.cache[ObjectIdentifier(Auth.self)] = nil
     }
 
     /// Return authenticated type
-    /// - Parameter authenticatedType: Type required
+    /// - Parameter : Type required
     @inlinable
     public func get<Auth: Authenticatable>(_: Auth.Type) -> Auth? {
         return self.cache[ObjectIdentifier(Auth.self)] as? Auth
     }
 
     /// Require authenticated type
-    /// - Parameter authenticatedType: Type required
+    /// - Parameter : Type required
     @inlinable
     public func require<Auth: Authenticatable>(_: Auth.Type) throws -> Auth {
         guard let auth = get(Auth.self) else {
@@ -52,7 +52,7 @@ public struct LoginCache: Sendable {
     }
 
     /// Return if cache is authenticated with type
-    /// - Parameter authenticatedType: Authentication type
+    /// - Parameter : Type required type
     @inlinable
     public func has<Auth: Authenticatable>(_: Auth.Type) -> Bool {
         return self.cache[ObjectIdentifier(Auth.self)] != nil
