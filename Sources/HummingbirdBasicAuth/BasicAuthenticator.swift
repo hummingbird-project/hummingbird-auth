@@ -25,7 +25,8 @@ public struct BasicAuthenticator<Context: AuthRequestContext, Repository: UserPa
     /// Initialize BasicAuthenticator middleware
     /// - Parameters:
     ///   - users: User repository
-    ///   - passwordVerifier: password verifier
+    ///   - passwordHashVerifier: password verifier
+    ///   - context: Request context type
     public init(users: Repository, passwordHashVerifier: Verifier = BcryptPasswordVerifier(), context: Context.Type = Context.self) {
         self.users = users
         self.passwordHashVerifier = passwordHashVerifier
@@ -34,6 +35,7 @@ public struct BasicAuthenticator<Context: AuthRequestContext, Repository: UserPa
     /// Initialize BasicAuthenticator middleware
     /// - Parameters:
     ///   - passwordVerifier: password verifier
+    ///   - context: Request context type
     ///   - getUser: Closure returning user type
     public init<User: PasswordAuthenticatable>(
         passwordHashVerifier: Verifier = BcryptPasswordVerifier(),
