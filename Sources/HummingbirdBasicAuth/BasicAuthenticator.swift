@@ -34,7 +34,7 @@ public struct BasicAuthenticator<Context: AuthRequestContext, Repository: UserPa
 
     /// Initialize BasicAuthenticator middleware
     /// - Parameters:
-    ///   - passwordVerifier: password verifier
+    ///   - passwordHashVerifier: password verifier
     ///   - context: Request context type
     ///   - getUser: Closure returning user type
     public init<User: PasswordAuthenticatable>(
