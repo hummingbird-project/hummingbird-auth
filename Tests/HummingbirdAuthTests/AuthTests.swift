@@ -152,6 +152,38 @@ final class AuthTests: XCTestCase {
         }
     }
 
+    func testClosureAuthenticator() async throws {
+        struct User: Authenticatable {
+            let name: String
+        }
+        struct TestAuthenticator<Context: AuthRequestContext>: AuthenticatorMiddleware {
+            func authenticate(request: Request, context: Context) async throws -> User? {
+                User(name: "Adam")
+            }
+        }
+        let router = Router(context: BasicAuthRequestContext.self)
+        router.group()
+            .add(middleware: ClosureAuthenticator { request, _ -> User? in
+                guard let user = request.uri.queryParameters.get("user") else { return nil }
+                return User(name: user)
+            })
+            .get("authenticate") { _, context in
+                let user = try context.auth.require(User.self)
+                return user.name
+            }
+        let app = Application(responder: router.buildResponder())
+
+        try await app.test(.router) { client in
+            try await client.execute(uri: "/authenticate?user=john", method: .get) { response in
+                XCTAssertEqual(response.status, .ok)
+                XCTAssertEqual(response.body, ByteBuffer(string: "john"))
+            }
+            try await client.execute(uri: "/authenticate", method: .get) { response in
+                XCTAssertEqual(response.status, .unauthorized)
+            }
+        }
+    }
+
     func testIsAuthenticatedMiddleware() async throws {
         struct User: Authenticatable {
             let name: String

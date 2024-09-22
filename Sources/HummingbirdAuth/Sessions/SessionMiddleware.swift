@@ -2,7 +2,7 @@
 //
 // This source file is part of the Hummingbird server framework project
 //
-// Copyright (c) 2021-2022 the Hummingbird authors
+// Copyright (c) 2024 the Hummingbird authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -14,30 +14,35 @@
 
 import Hummingbird
 
-/// Session authenticator
-@available(*, deprecated, message: "Use SessionAuthenticator instead.")
-public protocol SessionMiddleware: AuthenticatorMiddleware {
-    /// authenticable value
-    associatedtype Value = Value
-    /// session object
-    associatedtype Session: Codable
+public struct SessionMiddleware<Context: SessionRequestContext>: RouterMiddleware {
+    let sessionStorage: SessionStorage
+    let sessionExpiration: Duration
 
-    /// container for session objects
-    var sessionStorage: SessionStorage { get }
+    public init(sessionStorage: SessionStorage, sessionExpiration: Duration = .seconds(60 * 60 * 12)) {
+        self.sessionStorage = sessionStorage
+        self.sessionExpiration = sessionExpiration
+    }
 
-    /// Convert Session object into authenticated user
-    /// - Parameters:
-    ///   - from: session
-    ///   - request: request being processed
-    ///   - context: Request context
-    /// - Returns: Future holding optional authenticated user
-    func getValue(from: Session, request: Request, context: Context) async throws -> Value?
-}
-
-@available(*, deprecated, message: "Use SessionAuthenticator instead.")
-extension SessionMiddleware {
-    public func authenticate(request: Request, context: Context) async throws -> Value? {
-        guard let session: Session = try await self.sessionStorage.load(request: request) else { return nil }
-        return try await getValue(from: session, request: request, context: context)
+    public func handle(_ request: Request, context: Context, next: (Request, Context) async throws -> Response) async throws -> Response {
+        let sessionData = try await sessionStorage.load(as: SessionData<Context.Session>.self, request: request)
+        if let sessionData {
+            context.sessions.setSessionData(sessionData)
+        }
+        var response = try await next(request, context)
+        let session = context.sessions.getSessionData()
+        if let session {
+            if session.edited {
+                do {
+                    try await self.sessionStorage.update(session: session, expiresIn: self.sessionExpiration, request: request)
+                } catch let error as SessionStorage.Error where error == .sessionDoesNotExist {
+                    let cookie = try await self.sessionStorage.save(session: session, expiresIn: self.sessionExpiration)
+                    response.headers[values: .setCookie].append(cookie.description)
+                }
+            }
+        } else if sessionData != nil {
+            // if we had a session and we don't anymore, set session to expire
+            try await self.sessionStorage.update(session: session, expiresIn: .seconds(0), request: request)
+        }
+        return response
     }
 }

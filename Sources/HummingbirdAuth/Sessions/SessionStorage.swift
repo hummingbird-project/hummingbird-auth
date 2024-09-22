@@ -100,7 +100,7 @@ public struct SessionStorage: Sendable {
     }
 
     /// Get session id gets id from request
-    func getId(request: Request) -> String? {
+    public func getId(request: Request) -> String? {
         guard let sessionCookie = request.cookies[self.sessionCookie]?.value else { return nil }
         return String(sessionCookie)
     }

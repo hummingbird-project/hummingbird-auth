@@ -26,11 +26,9 @@ final class SessionTests: XCTestCase {
                 let name: String
             }
 
-            typealias Identifier = Int
-
             static let testSessionId = 89
 
-            func getUser(from id: Identifier, context: UserRepositoryContext) async throws -> User? {
+            func getUser(from id: Int, context: UserRepositoryContext) async throws -> User? {
                 let user = self.users[id]
                 return user
             }
@@ -38,17 +36,19 @@ final class SessionTests: XCTestCase {
             let users = [Self.testSessionId: User(name: "Adam")]
         }
 
-        let router = Router(context: BasicAuthRequestContext.self)
         let persist = MemoryPersistDriver()
         let sessions = SessionStorage(persist)
-        router.put("session") { _, _ -> Response in
-            let cookie = try await sessions.save(session: TestUserRepository.testSessionId, expiresIn: .seconds(300))
-            var response = Response(status: .ok)
-            response.setCookie(cookie)
-            return response
+
+        let router = Router(context: BasicSessionRequestContext<Int>.self)
+        router.addMiddleware {
+            SessionMiddleware(sessionStorage: sessions)
+        }
+        router.put("session") { _, context -> Response in
+            context.sessions.setSession(TestUserRepository.testSessionId)
+            return .init(status: .ok)
         }
         router.group()
-            .add(middleware: SessionAuthenticator(users: TestUserRepository(), sessionStorage: sessions))
+            .add(middleware: SessionAuthenticator(users: TestUserRepository()))
             .get("session") { _, context -> HTTPResponse.Status in
                 _ = try context.auth.require(TestUserRepository.User.self)
                 return .ok
@@ -71,21 +71,25 @@ final class SessionTests: XCTestCase {
         struct User: Authenticatable {
             let name: String
         }
-        let router = Router(context: BasicAuthRequestContext.self)
+        struct TestSession: Codable {
+            let userID: String
+        }
+        let router = Router(context: BasicSessionRequestContext<TestSession>.self)
         let persist = MemoryPersistDriver()
         let sessions = SessionStorage(persist)
-        router.put("session") { _, _ -> Response in
-            let cookie = try await sessions.save(session: 1, expiresIn: .seconds(300))
-            var response = Response(status: .ok)
-            response.setCookie(cookie)
-            return response
+        router.addMiddleware {
+            SessionMiddleware(sessionStorage: sessions)
+        }
+        router.put("session") { _, context -> HTTPResponse.Status in
+            context.sessions.setSession(.init(userID: "Adam"))
+            return .ok
         }
         router.group()
-            .add(
-                middleware: SessionAuthenticator(sessionStorage: sessions) { (_: Int, _) in
-                    User(name: "Adam")
+            .addMiddleware {
+                SessionAuthenticator { session, _ -> User? in
+                    return User(name: session.userID)
                 }
-            )
+            }
             .get("session") { _, context -> HTTPResponse.Status in
                 _ = try context.auth.require(User.self)
                 return .ok
