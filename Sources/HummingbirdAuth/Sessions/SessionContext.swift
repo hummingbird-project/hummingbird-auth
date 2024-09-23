@@ -102,7 +102,7 @@ public struct BasicSessionRequestContext<Session>: AuthRequestContext, SessionRe
     /// Login cache
     public var auth: LoginCache
     /// Session
-    public var sessions: SessionContext<Session>
+    public let sessions: SessionContext<Session>
 
     ///  Initialize an `RequestContext`
     /// - Parameters:
