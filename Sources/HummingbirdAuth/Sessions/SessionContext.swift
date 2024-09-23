@@ -92,7 +92,7 @@ public struct SessionContext<Session: Sendable & Codable>: Sendable {
 
 public protocol SessionRequestContext<Session>: RequestContext {
     associatedtype Session: Sendable & Codable
-    var sessions: SessionContext<Session> { get set }
+    var sessions: SessionContext<Session> { get }
 }
 
 /// Implementation of a basic request context that supports everything the Hummingbird library needs
