@@ -69,7 +69,7 @@ public struct SessionContext<Session: Sendable & Codable>: Sendable {
 
     /// Initialize `SessionContext`
     @inlinable
-    init() {
+    public init() {
         self._storage = .init(nil)
     }
 
