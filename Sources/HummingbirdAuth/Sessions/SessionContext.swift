@@ -22,16 +22,19 @@ public struct SessionData<Session: Sendable & Codable>: Codable, Sendable {
     var object: Session
     @usableFromInline
     var edited: Bool
+    public var expiresIn: Duration?
 
-    public init(value: Session) {
+    init(value: Session, expiresIn: Duration?) {
         self.object = value
         self.edited = true
+        self.expiresIn = expiresIn
     }
 
     public init(from decoder: any Decoder) throws {
         let container = try decoder.singleValueContainer()
         self.object = try container.decode(Session.self)
         self.edited = false
+        self.expiresIn = nil
     }
 
     public func encode(to encoder: any Encoder) throws {
@@ -59,9 +62,9 @@ public struct SessionContext<Session: Sendable & Codable>: Sendable {
         self._storage = .init(nil)
     }
 
-    public func setSession(_ session: Session) {
+    public func setSession(_ session: Session, expiresIn: Duration? = nil) {
         self._storage.withLockedValue {
-            $0 = .init(value: session)
+            $0 = .init(value: session, expiresIn: expiresIn)
         }
     }
 

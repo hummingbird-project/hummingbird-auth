@@ -16,11 +16,11 @@ import Hummingbird
 
 public struct SessionMiddleware<Context: SessionRequestContext>: RouterMiddleware {
     let sessionStorage: SessionStorage
-    let sessionExpiration: Duration
+    let defaultSessionExpiration: Duration
 
     public init(sessionStorage: SessionStorage, sessionExpiration: Duration = .seconds(60 * 60 * 12)) {
         self.sessionStorage = sessionStorage
-        self.sessionExpiration = sessionExpiration
+        self.defaultSessionExpiration = sessionExpiration
     }
 
     public func handle(_ request: Request, context: Context, next: (Request, Context) async throws -> Response) async throws -> Response {
@@ -32,10 +32,11 @@ public struct SessionMiddleware<Context: SessionRequestContext>: RouterMiddlewar
         let session = context.sessions.getSessionData()
         if let session {
             if session.edited {
+                let expiresIn = session.expiresIn ?? self.defaultSessionExpiration
                 do {
-                    try await self.sessionStorage.update(session: session, expiresIn: self.sessionExpiration, request: request)
+                    try await self.sessionStorage.update(session: session, expiresIn: expiresIn, request: request)
                 } catch let error as SessionStorage.Error where error == .sessionDoesNotExist {
-                    let cookie = try await self.sessionStorage.save(session: session, expiresIn: self.sessionExpiration)
+                    let cookie = try await self.sessionStorage.save(session: session, expiresIn: expiresIn)
                     response.headers[values: .setCookie].append(cookie.description)
                 }
             }
