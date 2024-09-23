@@ -90,13 +90,18 @@ public struct SessionStorage: Sendable {
         )
     }
 
-    /// delete session
-    public func delete(request: Request) async throws {
-        guard let sessionId = getId(request: request) else { return }
+    /// Delete session
+    /// - Parameter request: Request session is attached to
+    /// - Returns: Expired cookie
+    public func delete(request: Request) async throws -> Cookie {
+        guard let sessionId = getId(request: request) else {
+            throw Error.sessionDoesNotExist
+        }
         // prefix with "hbs."
-        return try await self.storage.remove(
+        try await self.storage.remove(
             key: "hbs.\(sessionId)"
         )
+        return .init(name: self.sessionCookie, value: sessionId, expires: .now, path: "/")
     }
 
     /// Get session id gets id from request

@@ -69,7 +69,9 @@ public struct SessionMiddleware<Context: SessionRequestContext>: RouterMiddlewar
             }
         } else if originalSessionData != nil {
             // if we had a session and we don't anymore, set session to expire
-            try await self.sessionStorage.update(session: sessionData, expiresIn: .seconds(0), request: request)
+            let cookie = try await self.sessionStorage.delete(request: request)
+            // As the session and cookie expiration has been updated, set the "Set-Cookie" header
+            response.headers[values: .setCookie].append(cookie.description)
         }
         return response
     }
