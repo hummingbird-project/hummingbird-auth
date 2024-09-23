@@ -22,7 +22,6 @@ public struct SessionAuthenticator<Context: AuthRequestContext & SessionRequestC
     /// Initialize SessionAuthenticator middleware
     /// - Parameters:
     ///   - users: User repository
-    ///   - sessionStorage: session storage
     ///   - context: Request context type
     public init(users: Repository, context: Context.Type = Context.self) {
         self.users = users
@@ -30,7 +29,6 @@ public struct SessionAuthenticator<Context: AuthRequestContext & SessionRequestC
 
     /// Initialize SessionAuthenticator middleware
     /// - Parameters:
-    ///   - sessionStorage: session storage
     ///   - context: Request context type
     ///   - getUser: Closure returning user type from session id
     public init<User: Authenticatable, Session>(
