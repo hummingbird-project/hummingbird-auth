@@ -68,7 +68,7 @@ public struct SessionStorage: Sendable {
     /// update existing session
     ///
     /// If session does not exist then a `sessionDoesNotExist` error will be thrown
-    public func update(session: some Codable, expiresIn: Duration, request: Request) async throws {
+    public func update(session: some Codable, expiresIn: Duration?, request: Request) async throws {
         guard let sessionId = self.getId(request: request) else {
             throw Error.sessionDoesNotExist
         }

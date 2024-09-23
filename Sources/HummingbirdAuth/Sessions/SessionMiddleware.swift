@@ -58,11 +58,13 @@ public struct SessionMiddleware<Context: SessionRequestContext>: RouterMiddlewar
         if let sessionData {
             // if session has been edited then store new session
             if sessionData.edited {
-                let expiresIn = sessionData.expiresIn ?? self.defaultSessionExpiration
                 do {
-                    try await self.sessionStorage.update(session: sessionData, expiresIn: expiresIn, request: request)
+                    try await self.sessionStorage.update(session: sessionData, expiresIn: sessionData.expiresIn, request: request)
                 } catch let error as SessionStorage.Error where error == .sessionDoesNotExist {
-                    let cookie = try await self.sessionStorage.save(session: sessionData, expiresIn: expiresIn)
+                    let cookie = try await self.sessionStorage.save(
+                        session: sessionData,
+                        expiresIn: sessionData.expiresIn ?? self.defaultSessionExpiration
+                    )
                     // this is a new session so set the "Set-Cookie" header
                     response.headers[values: .setCookie].append(cookie.description)
                 }
