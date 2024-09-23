@@ -18,9 +18,14 @@ public struct SessionMiddleware<Context: SessionRequestContext>: RouterMiddlewar
     let sessionStorage: SessionStorage
     let defaultSessionExpiration: Duration
 
-    public init(sessionStorage: SessionStorage, sessionExpiration: Duration = .seconds(60 * 60 * 12)) {
+    public init(storage: any PersistDriver, sessionCookie: String = "SESSION_ID", defaultSessionExpiration: Duration = .seconds(60 * 60 * 12)) {
+        self.sessionStorage = .init(storage, sessionCookie: sessionCookie)
+        self.defaultSessionExpiration = defaultSessionExpiration
+    }
+
+    public init(sessionStorage: SessionStorage, defaultSessionExpiration: Duration = .seconds(60 * 60 * 12)) {
         self.sessionStorage = sessionStorage
-        self.defaultSessionExpiration = sessionExpiration
+        self.defaultSessionExpiration = defaultSessionExpiration
     }
 
     public func handle(_ request: Request, context: Context, next: (Request, Context) async throws -> Response) async throws -> Response {
