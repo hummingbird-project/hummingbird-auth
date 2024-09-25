@@ -55,27 +55,48 @@ public protocol Authenticatable: Sendable {}
 ///     }
 /// }
 /// ```
-public protocol AuthenticatorMiddleware: RouterMiddleware where Context: AuthRequestContext {
+public protocol Authenticator<Context> {
+    associatedtype Context: RequestContext
+
     /// type to be authenticated
     associatedtype Value: Authenticatable
+
     /// Called by middleware to see if request can authenticate.
     ///
     /// Should return an authenticatable object if authenticated, return nil is not authenticated
     /// but want the request to be passed onto the next middleware or the router, or throw an error
     ///  if the request should not proceed any further
-    func authenticate(request: Request, context: Context) async throws -> Value?
+    func authenticate(request: Request, context: Context) async throws -> Value
 }
 
-extension AuthenticatorMiddleware {
-    /// Calls `authenticate` and if it returns a valid authenticatable object `login` with this object
-    @inlinable
-    public func handle(_ request: Request, context: Context, next: (Request, Context) async throws -> Response) async throws -> Response {
-        if let authenticated = try await authenticate(request: request, context: context) {
-            var context = context
-            context.auth.login(authenticated)
-            return try await next(request, context)
-        } else {
-            return try await next(request, context)
+extension RouterMethods {
+    public func authGroup<A: Authenticator<Context>, AuthenticatedContext: AuthenticatedRequestContext>(
+        _ path: RouterPath = "",
+        authenticator: A,
+        makeContext: @escaping @Sendable (Request, Context, A.Value ) async throws -> AuthenticatedContext
+    ) -> RouterGroup<AuthenticatedContext> {
+        self.group(path) { req, oldContext -> AuthenticatedContext in
+            let authenticated = try await authenticator.authenticate(
+                request: req,
+                context: oldContext
+            )
+            return try await makeContext(req, oldContext, authenticated)
+        }
+    }
+
+    public func authGroup<A: Authenticator<Context>>(
+        _ path: RouterPath = "",
+        authenticator: A
+    ) -> RouterGroup<BasicAuthenticatedRequestContext<A.Value>> {
+        self.group(path) { req, oldContext -> BasicAuthenticatedRequestContext<A.Value> in
+            let authenticated = try await authenticator.authenticate(
+                request: req,
+                context: oldContext
+            )
+            return BasicAuthenticatedRequestContext<A.Value>(
+                coreContext: oldContext.coreContext,
+                identity: authenticated
+            )
         }
     }
 }

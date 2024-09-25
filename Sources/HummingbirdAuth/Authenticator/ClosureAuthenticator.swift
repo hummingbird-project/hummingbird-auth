@@ -15,14 +15,14 @@
 import Hummingbird
 import NIOCore
 
-public struct ClosureAuthenticator<Context: AuthRequestContext, Value: Authenticatable>: AuthenticatorMiddleware {
-    let closure: @Sendable (Request, Context) async throws -> Value?
+public struct ClosureAuthenticator<Context: RequestContext, Value: Authenticatable>: Authenticator {
+    let closure: @Sendable (Request, Context) async throws -> Value
 
-    public init(_ closure: @escaping @Sendable (Request, Context) async throws -> Value?) {
+    public init(_ closure: @escaping @Sendable (Request, Context) async throws -> Value) {
         self.closure = closure
     }
 
-    public func authenticate(request: Request, context: Context) async throws -> Value? {
+    public func authenticate(request: Request, context: Context) async throws -> Value {
         return try await self.closure(request, context)
     }
 }

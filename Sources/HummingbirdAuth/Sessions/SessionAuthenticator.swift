@@ -18,7 +18,10 @@ import Hummingbird
 ///
 /// The `SessionAuthenticator` needs to have the ``SessionMiddleware`` before it in the middleware
 /// chain to extract session information for the request
-public struct SessionAuthenticator<Context: AuthRequestContext & SessionRequestContext, Repository: UserSessionRepository>: AuthenticatorMiddleware where Context.Session == Repository.Identifier {
+public struct SessionAuthenticator<
+    Context: SessionRequestContext,
+    Repository: UserSessionRepository
+>: Authenticator where Context.Session == Repository.Identifier {
     /// User repository
     public let users: Repository
 
@@ -42,11 +45,14 @@ public struct SessionAuthenticator<Context: AuthRequestContext & SessionRequestC
     }
 
     @inlinable
-    public func authenticate(request: Request, context: Context) async throws -> Repository.User? {
-        if let session = context.sessions.session {
-            return try await self.users.getUser(from: session, context: .init(logger: context.logger))
-        } else {
-            return nil
+    public func authenticate(request: Request, context: Context) async throws -> Repository.User {
+        guard
+            let session = context.sessions.session,
+            let user = try await self.users.getUser(from: session, context: .init(logger: context.logger))
+        else {
+            throw HTTPError(.unauthorized)
         }
+
+        return user
     }
 }

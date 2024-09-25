@@ -18,7 +18,11 @@ import HummingbirdAuth
 /// Basic password authenticator
 ///
 /// Extract username and password from "Authorization" header and checks user exists and that the password is correct
-public struct BasicAuthenticator<Context: AuthRequestContext, Repository: UserPasswordRepository, Verifier: PasswordHashVerifier>: AuthenticatorMiddleware {
+public struct BasicAuthenticator<
+    Context: RequestContext,
+    Repository: UserPasswordRepository,
+    Verifier: PasswordHashVerifier
+>: Authenticator {
     public let users: Repository
     public let passwordHashVerifier: Verifier
 
@@ -47,16 +51,24 @@ public struct BasicAuthenticator<Context: AuthRequestContext, Repository: UserPa
     }
 
     @inlinable
-    public func authenticate(request: Request, context: Context) async throws -> Repository.User? {
+    public func authenticate(request: Request, context: Context) async throws -> Repository.User {
         // does request have basic authentication info in the "Authorization" header
-        guard let basic = request.headers.basic else { return nil }
+        guard let basic = request.headers.basic else {
+            throw HTTPError(.unauthorized)
+        }
 
         // check if user exists and then verify the entered password against the one stored in the database.
         // If it is correct then login in user
         let user = try await users.getUser(named: basic.username, context: .init(logger: context.logger))
-        guard let user, let passwordHash = user.passwordHash else { return nil }
+        guard let user, let passwordHash = user.passwordHash else {
+            throw HTTPError(.unauthorized)
+        }
+
         // Verify password hash on a separate thread to not block the general task executor
-        guard try await self.passwordHashVerifier.verifyPassword(basic.password, createsHash: passwordHash) else { return nil }
+        guard try await self.passwordHashVerifier.verifyPassword(basic.password, createsHash: passwordHash) else {
+            throw HTTPError(.unauthorized)
+        }
+        
         return user
     }
 }
