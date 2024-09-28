@@ -16,7 +16,7 @@ import ExtrasBase64
 import Hummingbird
 
 /// Stores session data
-public struct SessionStorage: Sendable {
+public struct SessionStorage<SessionType: Codable>: Sendable {
     /// SessionStorage Errors
     public struct Error: Swift.Error, Equatable {
         enum ErrorType {
@@ -33,6 +33,7 @@ public struct SessionStorage: Sendable {
     }
 
     let sessionCookie: String
+    let storage: any PersistDriver
 
     /// Initialize session storage
     public init(_ storage: any PersistDriver, sessionCookie: String = "SESSION_ID") {
@@ -54,7 +55,7 @@ public struct SessionStorage: Sendable {
     /// ```
     /// If you know a session already exists it is preferable to use
     /// ``SessionStorage/update(session:expiresIn:request:)``.
-    public func save(session: some Codable, expiresIn: Duration) async throws -> Cookie {
+    public func save(session: SessionType, expiresIn: Duration) async throws -> Cookie {
         let sessionId = Self.createSessionId()
         // prefix with "hbs."
         try await self.storage.set(
@@ -68,7 +69,7 @@ public struct SessionStorage: Sendable {
     /// update existing session
     ///
     /// If session does not exist then a `sessionDoesNotExist` error will be thrown
-    public func update(session: some Codable, expiresIn: Duration, request: Request) async throws {
+    public func update(session: SessionType, expiresIn: Duration?, request: Request) async throws {
         guard let sessionId = self.getId(request: request) else {
             throw Error.sessionDoesNotExist
         }
@@ -81,26 +82,31 @@ public struct SessionStorage: Sendable {
     }
 
     /// load session
-    public func load<Session: Codable>(as: Session.Type = Session.self, request: Request) async throws -> Session? {
+    public func load(request: Request) async throws -> SessionType? {
         guard let sessionId = getId(request: request) else { return nil }
         // prefix with "hbs."
         return try await self.storage.get(
             key: "hbs.\(sessionId)",
-            as: Session.self
+            as: SessionType.self
         )
     }
 
-    /// delete session
-    public func delete(request: Request) async throws {
-        guard let sessionId = getId(request: request) else { return }
+    /// Delete session
+    /// - Parameter request: Request session is attached to
+    /// - Returns: Expired cookie
+    public func delete(request: Request) async throws -> Cookie {
+        guard let sessionId = getId(request: request) else {
+            throw Error.sessionDoesNotExist
+        }
         // prefix with "hbs."
-        return try await self.storage.remove(
+        try await self.storage.remove(
             key: "hbs.\(sessionId)"
         )
+        return .init(name: self.sessionCookie, value: sessionId, expires: .now, path: "/")
     }
 
     /// Get session id gets id from request
-    func getId(request: Request) -> String? {
+    public func getId(request: Request) -> String? {
         guard let sessionCookie = request.cookies[self.sessionCookie]?.value else { return nil }
         return String(sessionCookie)
     }
@@ -110,9 +116,4 @@ public struct SessionStorage: Sendable {
         let bytes: [UInt8] = (0..<32).map { _ in UInt8.random(in: 0...255) }
         return String(base64Encoding: bytes)
     }
-
-    // This is wrapped in an unsafe storage wrapper because I cannot conform `PersistDriver`
-    // to `Sendable` at this point because Redis and Fluent types do not currently conform to
-    // `Sendable` when it should be possible for this to be the case.
-    let storage: any PersistDriver
 }
