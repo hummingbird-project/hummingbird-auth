@@ -47,7 +47,7 @@ final class SessionTests: XCTestCase {
             context.sessions.setSession(TestUserRepository.testSessionId)
             return .init(status: .ok)
         }
-        router.group()
+        router
             .authGroup(authenticator: SessionAuthenticator(users: TestUserRepository()))
             .get("session") { _, context -> HTTPResponse.Status in
                 return .ok

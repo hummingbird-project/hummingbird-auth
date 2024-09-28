@@ -97,7 +97,7 @@ final class AuthTests: XCTestCase {
             }
         }
         let router = Router()
-        router.group()
+        router
             .authGroup(authenticator: TestAuthenticator())
             .get("authenticated") { _, context -> HTTPResponse.Status in
                 XCTAssertEqual(context.identity.name, "Adam")
