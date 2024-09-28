@@ -46,10 +46,11 @@ final class SessionTests: XCTestCase {
             context.sessions.setSession(TestUserRepository.testSessionId)
             return .init(status: .ok)
         }
-        router.group()
-            .add(middleware: SessionAuthenticator(users: TestUserRepository()))
+        router
+            .authGuard(BasicSessionAuthenticator(users: TestUserRepository())
+                    .requireAuthentication()
+            )
             .get("session") { _, context -> HTTPResponse.Status in
-                _ = try context.auth.require(TestUserRepository.User.self)
                 return .ok
             }
         let app = Application(responder: router.buildResponder())
@@ -82,14 +83,12 @@ final class SessionTests: XCTestCase {
             context.sessions.setSession(.init(userID: "Adam"))
             return .ok
         }
-        router.group()
-            .addMiddleware {
-                SessionAuthenticator { session, _ -> User? in
+        router
+            .authGuard(BasicSessionAuthenticator { session, _ -> User? in
                     return User(name: session.userID)
-                }
-            }
+                }.requireAuthentication()
+            )
             .get("session") { _, context -> HTTPResponse.Status in
-                _ = try context.auth.require(User.self)
                 return .ok
             }
         let app = Application(responder: router.buildResponder())

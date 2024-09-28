@@ -12,13 +12,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// Below is a list of unavailable symbols with the "HB" prefix. These are available
-// temporarily to ease transition from the old symbols that included the "HB"
-// prefix to the new ones.
-@_documentation(visibility: internal) @available(*, unavailable, renamed: "AuthRequestContext")
-public typealias HBAuthRequestContext = AuthRequestContext
-@_documentation(visibility: internal) @available(*, unavailable, renamed: "BasicAuthRequestContext")
-public typealias HBBasicAuthRequestContext = BasicAuthRequestContext
 @_documentation(visibility: internal) @available(*, unavailable, renamed: "LoginCache")
 public typealias HBLoginCache = LoginCache
 
@@ -26,8 +19,6 @@ public typealias HBLoginCache = LoginCache
 public typealias HBAuthenticatable = Authenticatable
 @_documentation(visibility: internal) @available(*, unavailable, renamed: "AuthenticatorMiddleware")
 public typealias HBAuthenticator = AuthenticatorMiddleware
-@_documentation(visibility: internal) @available(*, unavailable, renamed: "SessionAuthenticator")
-public typealias HBSessionAuthenticator = SessionAuthenticator
 @_documentation(visibility: internal) @available(*, unavailable, renamed: "SessionStorage")
 public typealias HBSessionStorage = SessionStorage
 

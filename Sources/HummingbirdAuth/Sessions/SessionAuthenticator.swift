@@ -18,7 +18,16 @@ import Hummingbird
 ///
 /// The `SessionAuthenticator` needs to have the ``SessionMiddleware`` before it in the middleware
 /// chain to extract session information for the request
-public struct SessionAuthenticator<Context: AuthRequestContext & SessionRequestContext, Repository: UserSessionRepository>: AuthenticatorMiddleware where Context.Session == Repository.Identifier {
+public struct BasicSessionAuthenticator<
+    InputContext: SessionRequestContext,
+    Repository: UserSessionRepository
+>: OptionalAuthenticatorMiddleware where InputContext.Session == Repository.Identifier {
+    public typealias InputContext = InputContext
+
+    public typealias Value = Repository.User
+    public typealias Input = Request
+    public typealias Output = Response
+
     /// User repository
     public let users: Repository
 
@@ -26,7 +35,7 @@ public struct SessionAuthenticator<Context: AuthRequestContext & SessionRequestC
     /// - Parameters:
     ///   - users: User repository
     ///   - context: Request context type
-    public init(users: Repository, context: Context.Type = Context.self) {
+    public init(users: Repository, context: InputContext.Type = InputContext.self) {
         self.users = users
     }
 
@@ -35,14 +44,14 @@ public struct SessionAuthenticator<Context: AuthRequestContext & SessionRequestC
     ///   - context: Request context type
     ///   - getUser: Closure returning user type from session id
     public init<User: Authenticatable, Session>(
-        context: Context.Type = Context.self,
+        context: InputContext.Type = InputContext.self,
         getUser: @escaping @Sendable (Session, UserRepositoryContext) async throws -> User?
     ) where Repository == UserSessionClosureRepository<Session, User> {
         self.users = UserSessionClosureRepository(getUser)
     }
 
     @inlinable
-    public func authenticate(request: Request, context: Context) async throws -> Repository.User? {
+    public func authenticate(request: Request, context: InputContext) async throws -> Repository.User? {
         if let session = context.sessions.session {
             return try await self.users.getUser(from: session, context: .init(logger: context.logger))
         } else {
