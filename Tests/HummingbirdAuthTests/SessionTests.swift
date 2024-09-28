@@ -37,11 +37,10 @@ final class SessionTests: XCTestCase {
         }
 
         let persist = MemoryPersistDriver()
-        let sessions = SessionStorage(persist)
 
         let router = Router(context: BasicSessionRequestContext<Int>.self)
         router.addMiddleware {
-            SessionMiddleware(sessionStorage: sessions)
+            SessionMiddleware(storage: persist)
         }
         router.put("session") { _, context -> Response in
             context.sessions.setSession(TestUserRepository.testSessionId)
@@ -76,9 +75,8 @@ final class SessionTests: XCTestCase {
         }
         let router = Router(context: BasicSessionRequestContext<TestSession>.self)
         let persist = MemoryPersistDriver()
-        let sessions = SessionStorage(persist)
         router.addMiddleware {
-            SessionMiddleware(sessionStorage: sessions)
+            SessionMiddleware(storage: persist)
         }
         router.put("session") { _, context -> HTTPResponse.Status in
             context.sessions.setSession(.init(userID: "Adam"))
