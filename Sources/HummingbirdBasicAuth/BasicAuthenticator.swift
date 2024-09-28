@@ -18,7 +18,11 @@ import HummingbirdAuth
 /// Basic password authenticator
 ///
 /// Extract username and password from "Authorization" header and checks user exists and that the password is correct
-public struct BasicAuthenticator<Context: AuthRequestContext, Repository: UserPasswordRepository, Verifier: PasswordHashVerifier>: AuthenticatorMiddleware {
+public struct BasicAuthenticator<
+    InputContext: RequestContext,
+    Repository: UserPasswordRepository,
+    Verifier: PasswordHashVerifier
+>: OptionalAuthenticatorMiddleware {
     public let users: Repository
     public let passwordHashVerifier: Verifier
 
@@ -27,7 +31,7 @@ public struct BasicAuthenticator<Context: AuthRequestContext, Repository: UserPa
     ///   - users: User repository
     ///   - passwordHashVerifier: password verifier
     ///   - context: Request context type
-    public init(users: Repository, passwordHashVerifier: Verifier = BcryptPasswordVerifier(), context: Context.Type = Context.self) {
+    public init(users: Repository, passwordHashVerifier: Verifier = BcryptPasswordVerifier(), context: InputContext.Type = InputContext.self) {
         self.users = users
         self.passwordHashVerifier = passwordHashVerifier
     }
@@ -39,7 +43,7 @@ public struct BasicAuthenticator<Context: AuthRequestContext, Repository: UserPa
     ///   - getUser: Closure returning user type
     public init<User: PasswordAuthenticatable>(
         passwordHashVerifier: Verifier = BcryptPasswordVerifier(),
-        context: Context.Type = Context.self,
+        context: InputContext.Type = InputContext.self,
         getUser: @escaping @Sendable (String, UserRepositoryContext) async throws -> User?
     ) where Repository == UserPasswordClosureRepository<User> {
         self.users = .init(getUser)
@@ -47,7 +51,7 @@ public struct BasicAuthenticator<Context: AuthRequestContext, Repository: UserPa
     }
 
     @inlinable
-    public func authenticate(request: Request, context: Context) async throws -> Repository.User? {
+    public func authenticate(request: Request, context: InputContext) async throws -> Repository.User? {
         // does request have basic authentication info in the "Authorization" header
         guard let basic = request.headers.basic else { return nil }
 

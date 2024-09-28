@@ -18,6 +18,20 @@ import NIOCore
 /// Protocol for objects that can be returned by an `AuthenticatorMiddleware`.
 public protocol Authenticatable: Sendable {}
 
+public protocol Authenticator<InputContext> {
+    associatedtype InputContext
+
+    /// type to be authenticated
+    associatedtype Value: Authenticatable
+
+    /// Called by middleware to see if request can authenticate.
+    ///
+    /// Should return an authenticatable object if authenticated, return nil is not authenticated
+    /// but want the request to be passed onto the next middleware or the router, or throw an error
+    ///  if the request should not proceed any further
+    func authenticate(request: Request, context: InputContext) async throws -> Value?
+}
+
 /// Protocol for a middleware that checks if a request is authenticated.
 ///
 /// Requires an `authenticate` function that returns authentication data when successful.
@@ -55,27 +69,69 @@ public protocol Authenticatable: Sendable {}
 ///     }
 /// }
 /// ```
-public protocol AuthenticatorMiddleware: RouterMiddleware where Context: AuthRequestContext {
-    /// type to be authenticated
-    associatedtype Value: Authenticatable
-    /// Called by middleware to see if request can authenticate.
-    ///
-    /// Should return an authenticatable object if authenticated, return nil is not authenticated
-    /// but want the request to be passed onto the next middleware or the router, or throw an error
-    ///  if the request should not proceed any further
-    func authenticate(request: Request, context: Context) async throws -> Value?
+public protocol AuthenticatorMiddleware<Value>: ContextTransformingMiddlewareProtocol, Authenticator where Input == Request, Output == Response {
 }
 
-extension AuthenticatorMiddleware {
+public protocol OptionalAuthenticatorMiddleware<Value>: AuthenticatorMiddleware, ContextTransformingMiddlewareProtocol where InputContext: RequestContext {
+    associatedtype OutputContext = BasicOptionalAuthenticationContext<Value>
+
+    func transformContext(_ context: InputContext, authenticatedBy authenticatable: Value?) async throws -> OutputContext
+}
+
+public protocol AuthenticatorGuardMiddleware<Value>: AuthenticatorMiddleware, ContextTransformingMiddlewareProtocol where InputContext: RequestContext {
+    associatedtype OutputContext = BasicAuthenticatedContext<Value>
+
+    func transformContext(_ context: InputContext, authenticatedBy authenticatable: Value) async throws -> OutputContext
+}
+
+extension OptionalAuthenticatorMiddleware where InputContext: RequestContext, OutputContext: RequestContext, OutputContext == BasicOptionalAuthenticationContext<Value> {
+    public func transformContext(_ context: InputContext, authenticatedBy currentUser: Value?) async throws -> OutputContext {
+        OutputContext(baseContext: context, currentUser: currentUser)
+    }
+}
+
+extension AuthenticatorGuardMiddleware where InputContext: RequestContext, OutputContext: RequestContext, OutputContext == BasicAuthenticatedContext<Value> {
+    public func transformContext(_ context: InputContext, authenticatedBy currentUser: Value) async throws -> OutputContext {
+        OutputContext(baseContext: context, currentUser: currentUser)
+    }
+}
+
+extension AuthenticatorGuardMiddleware {
     /// Calls `authenticate` and if it returns a valid authenticatable object `login` with this object
     @inlinable
-    public func handle(_ request: Request, context: Context, next: (Request, Context) async throws -> Response) async throws -> Response {
+    public func handle(_ request: Request, context: InputContext, next: (Request, OutputContext) async throws -> Response) async throws -> Response {
         if let authenticated = try await authenticate(request: request, context: context) {
-            var context = context
-            context.auth.login(authenticated)
-            return try await next(request, context)
-        } else {
+            let context = try await transformContext(context, authenticatedBy: authenticated)
             return try await next(request, context)
         }
+
+        throw HTTPError(.unauthorized)
+    }
+}
+
+extension OptionalAuthenticatorMiddleware {
+    /// Calls `authenticate` and if it returns a valid authenticatable object `login` with this object
+    @inlinable
+    public func handle(_ request: Request, context: InputContext, next: (Request, OutputContext) async throws -> Response) async throws -> Response {
+        let authenticated = try await authenticate(request: request, context: context)
+        let context = try await transformContext(context, authenticatedBy: authenticated)
+        return try await next(request, context)
+    }
+
+    public func requireAuthentication() -> MapToAuthenticatorGuardMiddleware<Value, Self> {
+        MapToAuthenticatorGuardMiddleware(underlying: self)
+    }
+}
+
+public struct MapToAuthenticatorGuardMiddleware<
+    Value: Authenticatable,
+    UnderlyingAuthenticator: OptionalAuthenticatorMiddleware<Value>
+>: AuthenticatorGuardMiddleware {
+    public typealias InputContext = UnderlyingAuthenticator.InputContext
+
+    let underlying: UnderlyingAuthenticator
+
+    public func authenticate(request: Request, context: InputContext) async throws -> Value? {
+        try await underlying.authenticate(request: request, context: context)
     }
 }
