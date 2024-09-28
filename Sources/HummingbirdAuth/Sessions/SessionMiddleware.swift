@@ -49,6 +49,7 @@ public struct SessionMiddleware<Context: SessionRequestContext>: RouterMiddlewar
 
     ///  Session Middleware handler
     public func handle(_ request: Request, context: Context, next: (Request, Context) async throws -> Response) async throws -> Response {
+        var context = context
         let originalSessionData = try await sessionStorage.load(as: SessionData<Context.Session>.self, request: request)
         if let originalSessionData {
             context.sessions.sessionData = originalSessionData

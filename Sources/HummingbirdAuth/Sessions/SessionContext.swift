@@ -65,12 +65,12 @@ public struct SessionData<Session: Sendable & Codable>: Codable, Sendable {
 /// Holds reference to session data protected by a lock to avoid concurrent access
 public struct SessionContext<Session: Sendable & Codable>: Sendable {
     @usableFromInline
-    let _storage: NIOLockedValueBox<SessionData<Session>?>
+    var sessionData: SessionData<Session>?
 
     /// Initialize `SessionContext`
     @inlinable
     public init() {
-        self._storage = .init(nil)
+        self.sessionData = nil
     }
 
     ///  Set session data
@@ -78,37 +78,19 @@ public struct SessionContext<Session: Sendable & Codable>: Sendable {
     ///   - session: Session data
     ///   - expiresIn: How long before session data expires
     @inlinable
-    public func setSession(_ session: Session, expiresIn: Duration? = nil) {
-        self._storage.withLockedValue {
-            $0 = .init(value: session, expiresIn: expiresIn)
-        }
+    public mutating func setSession(_ session: Session, expiresIn: Duration? = nil) {
+        self.sessionData = .init(value: session, expiresIn: expiresIn)
     }
 
     ///  Clear session data
     @inlinable
-    public func clearSession() {
-        self._storage.withLockedValue {
-            $0 = nil
-        }
+    public mutating func clearSession() {
+        self.sessionData = nil
     }
 
     /// Get a copy of the session data
     @inlinable
-    public var session: Session? { self._storage.withLockedValue { $0?.object } }
-
-    /// Access the session and allowing it to be mutated
-    @inlinable
-    public func withLockedSession<Value>(_ mutate: (inout SessionData<Session>?) -> Value) -> Value {
-        self._storage.withLockedValue {
-            mutate(&$0)
-        }
-    }
-
-    /// Internal access to full session data. Used by `SessionMiddleware`.
-    var sessionData: SessionData<Session>? {
-        get { self._storage.withLockedValue { $0 }}
-        nonmutating set { self._storage.withLockedValue { $0 = newValue }}
-    }
+    public var session: Session? { sessionData?.object }
 }
 
 /// Protocol for RequestContext that stores session data
@@ -118,7 +100,7 @@ public struct SessionContext<Session: Sendable & Codable>: Sendable {
 /// struct containing support for multiple authentication flows.
 public protocol SessionRequestContext<Session>: RequestContext {
     associatedtype Session: Sendable & Codable
-    var sessions: SessionContext<Session> { get }
+    var sessions: SessionContext<Session> { get set }
 }
 
 /// Implementation of a basic request context that supports session storage and authenticators
@@ -128,7 +110,7 @@ public struct BasicSessionRequestContext<Session>: AuthRequestContext, SessionRe
     /// Login cache
     public var auth: LoginCache
     /// Session
-    public let sessions: SessionContext<Session>
+    public var sessions: SessionContext<Session>
 
     ///  Initialize an `RequestContext`
     /// - Parameters:
