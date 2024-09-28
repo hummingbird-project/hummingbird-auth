@@ -23,9 +23,10 @@ import Hummingbird
 /// is flagged as being edited it will save it into the session storage and in the case this is
 /// a new session will set the "Set-Cookie" header.
 public struct SessionMiddleware<Context: SessionRequestContext>: RouterMiddleware {
-    /// storage for session data
-    let sessionStorage: SessionStorage
-    /// default duration for a session token
+    /// Storage for session data
+    let sessionStorage: SessionStorage<SessionData<Context.Session>>
+
+    /// Default duration for a session token
     let defaultSessionExpiration: Duration
 
     /// Initialize SessionMiddleware
@@ -42,14 +43,14 @@ public struct SessionMiddleware<Context: SessionRequestContext>: RouterMiddlewar
     /// - Parameters:
     ///   - sessionStorage: Session storage
     ///   - defaultSessionExpiration: Default expiration for session data
-    public init(sessionStorage: SessionStorage, defaultSessionExpiration: Duration = .seconds(60 * 60 * 12)) {
+    public init(sessionStorage: SessionStorage<SessionData<Context.Session>>, defaultSessionExpiration: Duration = .seconds(60 * 60 * 12)) {
         self.sessionStorage = sessionStorage
         self.defaultSessionExpiration = defaultSessionExpiration
     }
 
     ///  Session Middleware handler
     public func handle(_ request: Request, context: Context, next: (Request, Context) async throws -> Response) async throws -> Response {
-        let originalSessionData = try await sessionStorage.load(as: SessionData<Context.Session>.self, request: request)
+        let originalSessionData = try await sessionStorage.load(request: request)
         if let originalSessionData {
             context.sessions.sessionData = originalSessionData
         }
@@ -60,7 +61,7 @@ public struct SessionMiddleware<Context: SessionRequestContext>: RouterMiddlewar
             if sessionData.edited {
                 do {
                     try await self.sessionStorage.update(session: sessionData, expiresIn: sessionData.expiresIn, request: request)
-                } catch let error as SessionStorage.Error where error == .sessionDoesNotExist {
+                } catch let error as SessionStorage<SessionData<Context.Session>>.Error where error == .sessionDoesNotExist {
                     let cookie = try await self.sessionStorage.save(
                         session: sessionData,
                         expiresIn: sessionData.expiresIn ?? self.defaultSessionExpiration
