@@ -19,7 +19,9 @@ public struct IsAuthenticatedMiddleware<Auth: Authenticatable, Context: AuthRequ
     public init(_: Auth.Type) {}
 
     public func handle(_ request: Request, context: Context, next: (Request, Context) async throws -> Response) async throws -> Response {
-        guard context.auth.has(Auth.self) else { throw HTTPError(.unauthorized) }
+        guard context.identity != nil else {
+            throw HTTPError(.unauthorized)
+        }
         return try await next(request, context)
     }
 }

@@ -55,15 +55,15 @@ public protocol Authenticatable: Sendable {}
 ///     }
 /// }
 /// ```
-public protocol AuthenticatorMiddleware: RouterMiddleware where Context: AuthRequestContext {
+public protocol AuthenticatorMiddleware: RouterMiddleware where Context: AuthRequestContext<Identity> {
     /// type to be authenticated
-    associatedtype Value: Authenticatable
+    associatedtype Identity: Authenticatable
     /// Called by middleware to see if request can authenticate.
     ///
     /// Should return an authenticatable object if authenticated, return nil is not authenticated
     /// but want the request to be passed onto the next middleware or the router, or throw an error
     ///  if the request should not proceed any further
-    func authenticate(request: Request, context: Context) async throws -> Value?
+    func authenticate(request: Request, context: Context) async throws -> Identity?
 }
 
 extension AuthenticatorMiddleware {
@@ -71,8 +71,7 @@ extension AuthenticatorMiddleware {
     @inlinable
     public func handle(_ request: Request, context: Context, next: (Request, Context) async throws -> Response) async throws -> Response {
         if let authenticated = try await authenticate(request: request, context: context) {
-            var context = context
-            context.auth.login(authenticated)
+            context.identity = authenticated
             return try await next(request, context)
         } else {
             return try await next(request, context)

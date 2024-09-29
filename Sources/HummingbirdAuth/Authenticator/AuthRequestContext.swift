@@ -15,20 +15,43 @@
 import Hummingbird
 import Logging
 import NIOCore
+import NIOConcurrencyHelpers
 
 /// Protocol that all request contexts should conform to if they want to support
 /// authentication middleware
-public protocol AuthRequestContext: RequestContext {
-    /// Login cache
-    var auth: LoginCache { get set }
+public protocol AuthRequestContext<Identity>: RequestContext {
+    associatedtype Identity: Authenticatable
+
+    /// The authenticated identity
+    var auth: AuthContainer<Identity> { get set }
+}
+
+extension AuthRequestContext {
+    public var identity: Identity? {
+        get { auth.identity }
+        nonmutating set { auth.identity = newValue }
+    }
+}
+
+public struct AuthContainer<Identity: Authenticatable>: Sendable {
+    private let _identity: NIOLockedValueBox<Identity?>
+
+    public var identity: Identity? {
+        get { _identity.withLockedValue { $0 } }
+        nonmutating set { _identity.withLockedValue { $0 = newValue } }
+    }
+
+    public init(_ identity: Identity? = nil) {
+        self._identity = .init(identity)
+    }
 }
 
 /// Implementation of a basic request context that supports authenticators
-public struct BasicAuthRequestContext: AuthRequestContext, RequestContext {
+public struct BasicAuthRequestContext<Identity: Authenticatable>: AuthRequestContext, RequestContext {
     /// core context
     public var coreContext: CoreRequestContextStorage
-    /// Login cache
-    public var auth: LoginCache
+    /// The authenticated identity
+    public var auth: AuthContainer<Identity>
 
     ///  Initialize an `RequestContext`
     /// - Parameters:

@@ -23,7 +23,10 @@ import XCTest
 
 final class AuthTests: XCTestCase {
     func testBearer() async throws {
-        let router = Router(context: BasicAuthRequestContext.self)
+        struct User: Authenticatable {
+            let name: String
+        }
+        let router = Router(context: BasicAuthRequestContext<User>.self)
         router.get { request, _ -> String? in
             return request.headers.bearer?.token
         }
@@ -40,7 +43,10 @@ final class AuthTests: XCTestCase {
     }
 
     func testBasic() async throws {
-        let router = Router(context: BasicAuthRequestContext.self)
+        struct User: Authenticatable {
+            let name: String
+        }
+        let router = Router(context: BasicAuthRequestContext<User>.self)
         router.get { request, _ -> String? in
             return request.headers.basic.map { "\($0.username):\($0.password)" }
         }
@@ -54,8 +60,11 @@ final class AuthTests: XCTestCase {
     }
 
     func testBcryptThread() async throws {
+        struct User: Authenticatable {
+            let name: String
+        }
         let persist = MemoryPersistDriver()
-        let router = Router(context: BasicAuthRequestContext.self)
+        let router = Router(context: BasicAuthRequestContext<User>.self)
         router.put { request, _ -> HTTPResponse.Status in
             guard let basic = request.headers.basic else { throw HTTPError(.unauthorized) }
             let hash = try await NIOThreadPool.singleton.runIfActive {
@@ -94,28 +103,16 @@ final class AuthTests: XCTestCase {
         struct Additional: Authenticatable {
             let something: String
         }
-        let router = Router(context: BasicAuthRequestContext.self)
+        let router = Router(context: BasicAuthRequestContext<User>.self)
         router.get { _, context -> HTTPResponse.Status in
             var context = context
-            context.auth.login(User(name: "Test"))
-            context.auth.login(Additional(something: "abc"))
+            context.identity = User(name: "Test")
 
-            XCTAssert(context.auth.has(User.self))
-            XCTAssertEqual(context.auth.get(User.self)?.name, "Test")
-            XCTAssert(context.auth.has(Additional.self))
-            XCTAssertEqual(context.auth.get(Additional.self)?.something, "abc")
+            XCTAssertNotNil(context.identity)
+            XCTAssertEqual(context.identity?.name, "Test")
 
-            context.auth.logout(User.self)
-            XCTAssertFalse(context.auth.has(User.self))
-            XCTAssertNil(context.auth.get(User.self))
-            XCTAssert(context.auth.has(Additional.self))
-            XCTAssertEqual(context.auth.get(Additional.self)?.something, "abc")
-
-            context.auth.logout(Additional.self)
-            XCTAssertFalse(context.auth.has(User.self))
-            XCTAssertNil(context.auth.get(User.self))
-            XCTAssertFalse(context.auth.has(Additional.self))
-            XCTAssertNil(context.auth.get(Additional.self))
+            context.identity = nil
+            XCTAssertNil(context.identity)
 
             return .accepted
         }
@@ -132,15 +129,15 @@ final class AuthTests: XCTestCase {
         struct User: Authenticatable {
             let name: String
         }
-        struct TestAuthenticator<Context: AuthRequestContext>: AuthenticatorMiddleware {
+        struct TestAuthenticator<Context: AuthRequestContext<User>>: AuthenticatorMiddleware {
             func authenticate(request: Request, context: Context) async throws -> User? {
                 User(name: "Adam")
             }
         }
-        let router = Router(context: BasicAuthRequestContext.self)
+        let router = Router(context: BasicAuthRequestContext<User>.self)
         router.middlewares.add(TestAuthenticator())
         router.get { _, context -> HTTPResponse.Status in
-            guard context.auth.has(User.self) else { return .unauthorized }
+            guard context.identity != nil else { return .unauthorized }
             return .ok
         }
         let app = Application(responder: router.buildResponder())
@@ -156,19 +153,21 @@ final class AuthTests: XCTestCase {
         struct User: Authenticatable {
             let name: String
         }
-        struct TestAuthenticator<Context: AuthRequestContext>: AuthenticatorMiddleware {
+        struct TestAuthenticator<Context: AuthRequestContext<User>>: AuthenticatorMiddleware {
             func authenticate(request: Request, context: Context) async throws -> User? {
                 User(name: "Adam")
             }
         }
-        let router = Router(context: BasicAuthRequestContext.self)
+        let router = Router(context: BasicAuthRequestContext<User>.self)
         router.group()
             .add(middleware: ClosureAuthenticator { request, _ -> User? in
                 guard let user = request.uri.queryParameters.get("user") else { return nil }
                 return User(name: user)
             })
             .get("authenticate") { _, context in
-                let user = try context.auth.require(User.self)
+                guard let user = context.identity else {
+                    throw HTTPError(.unauthorized)
+                }
                 return user.name
             }
         let app = Application(responder: router.buildResponder())
@@ -188,12 +187,12 @@ final class AuthTests: XCTestCase {
         struct User: Authenticatable {
             let name: String
         }
-        struct TestAuthenticator<Context: AuthRequestContext>: AuthenticatorMiddleware {
+        struct TestAuthenticator<Context: AuthRequestContext<User>>: AuthenticatorMiddleware {
             func authenticate(request: Request, context: Context) async throws -> User? {
                 User(name: "Adam")
             }
         }
-        let router = Router(context: BasicAuthRequestContext.self)
+        let router = Router(context: BasicAuthRequestContext<User>.self)
         router.group()
             .add(middleware: TestAuthenticator())
             .add(middleware: IsAuthenticatedMiddleware(User.self))
@@ -218,22 +217,24 @@ final class AuthTests: XCTestCase {
     }
 
     func testBasicAuthenticator() async throws {
-        struct MyUserRepository: UserPasswordRepository {
-            struct User: PasswordAuthenticatable {
-                let username: String
-                let passwordHash: String?
-            }
+        struct User: PasswordAuthenticatable {
+            let username: String
+            let passwordHash: String?
+        }
 
+        struct MyUserRepository: UserPasswordRepository {
             func getUser(named username: String, context: UserRepositoryContext) -> User? {
                 return self.users[username].map { .init(username: username, passwordHash: $0) }
             }
 
             let users = ["admin": Bcrypt.hash("password", cost: 8)]
         }
-        let router = Router(context: BasicAuthRequestContext.self)
+        let router = Router(context: BasicAuthRequestContext<User>.self)
         router.add(middleware: BasicAuthenticator(users: MyUserRepository()))
-        router.get { _, context -> String? in
-            let user = try context.auth.require(MyUserRepository.User.self)
+        router.get { _, context -> String in
+            guard let user = context.identity else {
+                throw HTTPError(.unauthorized)
+            }
             return user.username
         }
         let app = Application(responder: router.buildResponder())
@@ -254,14 +255,16 @@ final class AuthTests: XCTestCase {
             let passwordHash: String?
         }
         let users = ["admin": Bcrypt.hash("password", cost: 8)]
-        let router = Router(context: BasicAuthRequestContext.self)
+        let router = Router(context: BasicAuthRequestContext<User>.self)
         router.add(
             middleware: BasicAuthenticator { username, _ in
                 return users[username].map { User(username: username, passwordHash: $0) }
             }
         )
         router.get { _, context -> String? in
-            let user = try context.auth.require(User.self)
+            guard let user = context.identity else {
+                throw HTTPError(.unauthorized)
+            }
             return user.username
         }
         let app = Application(responder: router.buildResponder())

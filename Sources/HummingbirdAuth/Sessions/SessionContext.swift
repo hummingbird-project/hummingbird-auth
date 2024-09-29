@@ -122,11 +122,14 @@ public protocol SessionRequestContext<Session>: RequestContext {
 }
 
 /// Implementation of a basic request context that supports session storage and authenticators
-public struct BasicSessionRequestContext<Session>: AuthRequestContext, SessionRequestContext, RequestContext where Session: Sendable & Codable {
+public struct BasicSessionRequestContext<
+    Session,
+    Identity: Authenticatable
+>: AuthRequestContext, SessionRequestContext, RequestContext where Session: Sendable & Codable {
     /// core context
     public var coreContext: CoreRequestContextStorage
-    /// Login cache
-    public var auth: LoginCache
+    /// The authenticated context
+    public var auth: AuthContainer<Identity>
     /// Session
     public let sessions: SessionContext<Session>
 
