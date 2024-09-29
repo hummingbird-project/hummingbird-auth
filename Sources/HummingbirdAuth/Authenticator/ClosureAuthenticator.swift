@@ -16,7 +16,7 @@ import Hummingbird
 import NIOCore
 
 public struct ClosureAuthenticator<
-    Identity: Authenticatable,
+    Identity: Sendable,
     Context: AuthRequestContext<Identity>
 >: AuthenticatorMiddleware {
     let closure: @Sendable (Request, Context) async throws -> Identity?

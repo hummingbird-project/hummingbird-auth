@@ -19,7 +19,7 @@ import HummingbirdAuth
 ///
 /// Extract username and password from "Authorization" header and checks user exists and that the password is correct
 public struct BasicAuthenticator<
-    Identity: Authenticatable,
+    Identity: Sendable,
     Context: AuthRequestContext<Identity>,
     Repository: UserPasswordRepository<Identity>,
     Verifier: PasswordHashVerifier

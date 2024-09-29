@@ -21,7 +21,7 @@ import XCTest
 
 final class SessionTests: XCTestCase {
     func testSessionAuthenticator() async throws {
-        struct User: Authenticatable {
+        struct User: Sendable {
             let name: String
         }
 
@@ -69,7 +69,7 @@ final class SessionTests: XCTestCase {
     }
 
     func testSessionAuthenticatorClosure() async throws {
-        struct User: Authenticatable {
+        struct User: Sendable {
             let name: String
         }
         struct TestSession: Codable {

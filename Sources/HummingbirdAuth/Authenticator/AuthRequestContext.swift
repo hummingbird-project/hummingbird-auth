@@ -20,38 +20,18 @@ import NIOConcurrencyHelpers
 /// Protocol that all request contexts should conform to if they want to support
 /// authentication middleware
 public protocol AuthRequestContext<Identity>: RequestContext {
-    associatedtype Identity: Authenticatable
+    associatedtype Identity: Sendable
 
     /// The authenticated identity
-    var auth: AuthContainer<Identity> { get set }
-}
-
-extension AuthRequestContext {
-    public var identity: Identity? {
-        get { auth.identity }
-        nonmutating set { auth.identity = newValue }
-    }
-}
-
-public struct AuthContainer<Identity: Authenticatable>: Sendable {
-    private let _identity: NIOLockedValueBox<Identity?>
-
-    public var identity: Identity? {
-        get { _identity.withLockedValue { $0 } }
-        nonmutating set { _identity.withLockedValue { $0 = newValue } }
-    }
-
-    public init(_ identity: Identity? = nil) {
-        self._identity = .init(identity)
-    }
+    var identity: Identity? { get set }
 }
 
 /// Implementation of a basic request context that supports authenticators
-public struct BasicAuthRequestContext<Identity: Authenticatable>: AuthRequestContext, RequestContext {
+public struct BasicAuthRequestContext<Identity: Sendable>: AuthRequestContext, RequestContext {
     /// core context
     public var coreContext: CoreRequestContextStorage
     /// The authenticated identity
-    public var auth: AuthContainer<Identity>
+    public var identity: Identity?
 
     ///  Initialize an `RequestContext`
     /// - Parameters:
@@ -60,6 +40,6 @@ public struct BasicAuthRequestContext<Identity: Authenticatable>: AuthRequestCon
     ///   - logger: Logger
     public init(source: Source) {
         self.coreContext = .init(source: source)
-        self.auth = .init()
+        self.identity = nil
     }
 }

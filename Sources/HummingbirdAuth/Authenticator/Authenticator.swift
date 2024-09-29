@@ -15,9 +15,6 @@
 import Hummingbird
 import NIOCore
 
-/// Protocol for objects that can be returned by an `AuthenticatorMiddleware`.
-public protocol Authenticatable: Sendable {}
-
 /// Protocol for a middleware that checks if a request is authenticated.
 ///
 /// Requires an `authenticate` function that returns authentication data when successful.
@@ -57,7 +54,7 @@ public protocol Authenticatable: Sendable {}
 /// ```
 public protocol AuthenticatorMiddleware: RouterMiddleware where Context: AuthRequestContext<Identity> {
     /// type to be authenticated
-    associatedtype Identity: Authenticatable
+    associatedtype Identity: Sendable
     /// Called by middleware to see if request can authenticate.
     ///
     /// Should return an authenticatable object if authenticated, return nil is not authenticated
@@ -71,6 +68,7 @@ extension AuthenticatorMiddleware {
     @inlinable
     public func handle(_ request: Request, context: Context, next: (Request, Context) async throws -> Response) async throws -> Response {
         if let authenticated = try await authenticate(request: request, context: context) {
+            var context = context
             context.identity = authenticated
             return try await next(request, context)
         } else {

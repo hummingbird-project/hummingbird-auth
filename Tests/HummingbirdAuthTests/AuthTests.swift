@@ -23,7 +23,7 @@ import XCTest
 
 final class AuthTests: XCTestCase {
     func testBearer() async throws {
-        struct User: Authenticatable {
+        struct User: Sendable {
             let name: String
         }
         let router = Router(context: BasicAuthRequestContext<User>.self)
@@ -43,7 +43,7 @@ final class AuthTests: XCTestCase {
     }
 
     func testBasic() async throws {
-        struct User: Authenticatable {
+        struct User: Sendable {
             let name: String
         }
         let router = Router(context: BasicAuthRequestContext<User>.self)
@@ -60,7 +60,7 @@ final class AuthTests: XCTestCase {
     }
 
     func testBcryptThread() async throws {
-        struct User: Authenticatable {
+        struct User: Sendable {
             let name: String
         }
         let persist = MemoryPersistDriver()
@@ -97,10 +97,10 @@ final class AuthTests: XCTestCase {
     }
 
     func testAuth() async throws {
-        struct User: Authenticatable {
+        struct User: Sendable {
             let name: String
         }
-        struct Additional: Authenticatable {
+        struct Additional: Sendable {
             let something: String
         }
         let router = Router(context: BasicAuthRequestContext<User>.self)
@@ -126,7 +126,7 @@ final class AuthTests: XCTestCase {
     }
 
     func testLogin() async throws {
-        struct User: Authenticatable {
+        struct User: Sendable {
             let name: String
         }
         struct TestAuthenticator<Context: AuthRequestContext<User>>: AuthenticatorMiddleware {
@@ -150,7 +150,7 @@ final class AuthTests: XCTestCase {
     }
 
     func testClosureAuthenticator() async throws {
-        struct User: Authenticatable {
+        struct User: Sendable {
             let name: String
         }
         struct TestAuthenticator<Context: AuthRequestContext<User>>: AuthenticatorMiddleware {
@@ -184,7 +184,7 @@ final class AuthTests: XCTestCase {
     }
 
     func testIsAuthenticatedMiddleware() async throws {
-        struct User: Authenticatable {
+        struct User: Sendable {
             let name: String
         }
         struct TestAuthenticator<Context: AuthRequestContext<User>>: AuthenticatorMiddleware {

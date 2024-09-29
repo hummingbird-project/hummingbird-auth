@@ -19,7 +19,7 @@ import Hummingbird
 /// The `SessionAuthenticator` needs to have the ``SessionMiddleware`` before it in the middleware
 /// chain to extract session information for the request
 public struct SessionAuthenticator<
-    Identity: Authenticatable,
+    Identity: Sendable,
     Context: AuthRequestContext<Identity> & SessionRequestContext,
     Repository: UserSessionRepository<Context.Session, Identity>
 >: AuthenticatorMiddleware {

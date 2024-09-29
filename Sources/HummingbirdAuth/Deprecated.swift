@@ -17,10 +17,10 @@
 // prefix to the new ones.
 @_documentation(visibility: internal) @available(*, unavailable, renamed: "AuthRequestContext")
 public typealias HBAuthRequestContext = AuthRequestContext
+@_documentation(visibility: internal) @available(*, unavailable, renamed: "Sendable")
+public typealias Authenticatable = Sendable
 @_documentation(visibility: internal) @available(*, unavailable, renamed: "BasicAuthRequestContext")
 public typealias HBBasicAuthRequestContext = BasicAuthRequestContext
-@_documentation(visibility: internal) @available(*, unavailable, renamed: "LoginCache")
-public typealias HBLoginCache = LoginCache
 
 @_documentation(visibility: internal) @available(*, unavailable, renamed: "Authenticatable")
 public typealias HBAuthenticatable = Authenticatable
