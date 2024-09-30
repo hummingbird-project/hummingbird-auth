@@ -23,7 +23,7 @@ public struct SessionAuthenticator<
     Repository: UserSessionRepository<Context.Session, Context.Identity>
 >: AuthenticatorMiddleware {
     public typealias Identity = Context.Identity
-    
+
     /// User repository
     public let users: Repository
 

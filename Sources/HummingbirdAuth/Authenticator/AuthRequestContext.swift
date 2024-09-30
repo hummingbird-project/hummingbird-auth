@@ -14,8 +14,8 @@
 
 import Hummingbird
 import Logging
-import NIOCore
 import NIOConcurrencyHelpers
+import NIOCore
 
 /// Protocol that all request contexts should conform to if they want to support
 /// authentication middleware

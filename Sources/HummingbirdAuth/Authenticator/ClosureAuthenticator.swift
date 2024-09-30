@@ -19,7 +19,7 @@ public struct ClosureAuthenticator<
     Context: AuthRequestContext
 >: AuthenticatorMiddleware {
     public typealias Identity = Context.Identity
-    
+
     let closure: @Sendable (Request, Context) async throws -> Context.Identity?
 
     public init(_ closure: @escaping @Sendable (Request, Context) async throws -> Context.Identity?) {
