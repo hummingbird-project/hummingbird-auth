@@ -195,12 +195,12 @@ final class AuthTests: XCTestCase {
         let router = Router(context: BasicAuthRequestContext<User>.self)
         router.group()
             .add(middleware: TestAuthenticator())
-            .add(middleware: IsAuthenticatedMiddleware(User.self))
+            .add(middleware: IsAuthenticatedMiddleware())
             .get("authenticated") { _, _ -> HTTPResponse.Status in
                 return .ok
             }
         router.group()
-            .add(middleware: IsAuthenticatedMiddleware(User.self))
+            .add(middleware: IsAuthenticatedMiddleware())
             .get("unauthenticated") { _, _ -> HTTPResponse.Status in
                 return .ok
             }
