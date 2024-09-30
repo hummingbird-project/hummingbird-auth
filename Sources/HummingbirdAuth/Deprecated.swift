@@ -22,8 +22,8 @@ public typealias Authenticatable = Sendable
 @_documentation(visibility: internal) @available(*, unavailable, renamed: "BasicAuthRequestContext")
 public typealias HBBasicAuthRequestContext = BasicAuthRequestContext
 
-@_documentation(visibility: internal) @available(*, unavailable, renamed: "Authenticatable")
-public typealias HBAuthenticatable = Authenticatable
+@_documentation(visibility: internal) @available(*, unavailable, renamed: "Sendable")
+public typealias HBAuthenticatable = Sendable
 @_documentation(visibility: internal) @available(*, unavailable, renamed: "AuthenticatorMiddleware")
 public typealias HBAuthenticator = AuthenticatorMiddleware
 @_documentation(visibility: internal) @available(*, unavailable, renamed: "SessionAuthenticator")
