@@ -16,16 +16,17 @@ import Hummingbird
 import NIOCore
 
 public struct ClosureAuthenticator<
-    Identity: Sendable,
-    Context: AuthRequestContext<Identity>
+    Context: AuthRequestContext
 >: AuthenticatorMiddleware {
-    let closure: @Sendable (Request, Context) async throws -> Identity?
+    public typealias Identity = Context.Identity
+    
+    let closure: @Sendable (Request, Context) async throws -> Context.Identity?
 
-    public init(_ closure: @escaping @Sendable (Request, Context) async throws -> Identity?) {
+    public init(_ closure: @escaping @Sendable (Request, Context) async throws -> Context.Identity?) {
         self.closure = closure
     }
 
-    public func authenticate(request: Request, context: Context) async throws -> Identity? {
+    public func authenticate(request: Request, context: Context) async throws -> Context.Identity? {
         return try await self.closure(request, context)
     }
 }

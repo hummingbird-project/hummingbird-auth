@@ -49,7 +49,7 @@ final class SessionTests: XCTestCase {
         router.group()
             .add(middleware: SessionAuthenticator(users: TestUserRepository()))
             .get("session") { _, context -> HTTPResponse.Status in
-                guard let user = context.identity else {
+                guard context.identity != nil else {
                     return .unauthorized
                 }
                 return .ok
@@ -111,7 +111,7 @@ final class SessionTests: XCTestCase {
     }
 
     func testSessionUpdate() async throws {
-        struct User: Codable, Authenticatable {
+        struct User: Codable, Sendable {
             var name: String
         }
 
@@ -160,7 +160,7 @@ final class SessionTests: XCTestCase {
     }
 
     func testSessionDeletion() async throws {
-        struct User: Codable, Authenticatable {
+        struct User: Codable, Sendable {
             let name: String
         }
 

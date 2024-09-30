@@ -19,10 +19,11 @@ import Hummingbird
 /// The `SessionAuthenticator` needs to have the ``SessionMiddleware`` before it in the middleware
 /// chain to extract session information for the request
 public struct SessionAuthenticator<
-    Identity: Sendable,
-    Context: AuthRequestContext<Identity> & SessionRequestContext,
-    Repository: UserSessionRepository<Context.Session, Identity>
+    Context: AuthRequestContext & SessionRequestContext,
+    Repository: UserSessionRepository<Context.Session, Context.Identity>
 >: AuthenticatorMiddleware {
+    public typealias Identity = Context.Identity
+    
     /// User repository
     public let users: Repository
 
@@ -40,7 +41,7 @@ public struct SessionAuthenticator<
     ///   - getUser: Closure returning user type from session id
     public init<Session>(
         context: Context.Type = Context.self,
-        getUser: @escaping @Sendable (Session, UserRepositoryContext) async throws -> Identity?
+        getUser: @escaping @Sendable (Session, UserRepositoryContext) async throws -> Context.Identity?
     ) where Repository == UserSessionClosureRepository<Session, Identity> {
         self.users = UserSessionClosureRepository(getUser)
     }

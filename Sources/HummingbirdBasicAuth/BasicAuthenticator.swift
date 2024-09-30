@@ -19,11 +19,12 @@ import HummingbirdAuth
 ///
 /// Extract username and password from "Authorization" header and checks user exists and that the password is correct
 public struct BasicAuthenticator<
-    Identity: Sendable,
-    Context: AuthRequestContext<Identity>,
-    Repository: UserPasswordRepository<Identity>,
+    Context: AuthRequestContext,
+    Repository: UserPasswordRepository,
     Verifier: PasswordHashVerifier
->: AuthenticatorMiddleware {
+>: AuthenticatorMiddleware where Context.Identity == Repository.User {
+    public typealias Identity = Context.Identity
+
     public let users: Repository
     public let passwordHashVerifier: Verifier
 
@@ -45,7 +46,7 @@ public struct BasicAuthenticator<
     public init(
         passwordHashVerifier: Verifier = BcryptPasswordVerifier(),
         context: Context.Type = Context.self,
-        getUser: @escaping @Sendable (String, UserRepositoryContext) async throws -> Identity?
+        getUser: @escaping @Sendable (String, UserRepositoryContext) async throws -> Context.Identity?
     ) where Identity: PasswordAuthenticatable, Repository == UserPasswordClosureRepository<Identity> {
         self.users = .init(getUser)
         self.passwordHashVerifier = passwordHashVerifier
