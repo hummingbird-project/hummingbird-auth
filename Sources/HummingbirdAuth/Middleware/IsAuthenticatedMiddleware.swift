@@ -15,11 +15,13 @@
 import Hummingbird
 
 /// Middleware returning 401 for unauthenticated requests
-public struct IsAuthenticatedMiddleware<Auth: Authenticatable, Context: AuthRequestContext>: RouterMiddleware {
-    public init(_: Auth.Type) {}
+public struct IsAuthenticatedMiddleware<Context: AuthRequestContext>: RouterMiddleware {
+    public init() {}
 
     public func handle(_ request: Request, context: Context, next: (Request, Context) async throws -> Response) async throws -> Response {
-        guard context.auth.has(Auth.self) else { throw HTTPError(.unauthorized) }
+        guard context.identity != nil else {
+            throw HTTPError(.unauthorized)
+        }
         return try await next(request, context)
     }
 }
