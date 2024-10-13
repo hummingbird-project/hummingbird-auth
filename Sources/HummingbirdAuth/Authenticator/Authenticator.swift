@@ -15,9 +15,6 @@
 import Hummingbird
 import NIOCore
 
-/// Protocol for objects that can be returned by an `AuthenticatorMiddleware`.
-public protocol Authenticatable: Sendable {}
-
 /// Protocol for a middleware that checks if a request is authenticated.
 ///
 /// Requires an `authenticate` function that returns authentication data when successful.
@@ -27,22 +24,21 @@ public protocol Authenticatable: Sendable {}
 ///
 /// To use an authenticator middleware it is required that your request context conform to
 /// ``AuthRequestContext`` so the middleware can attach authentication data to
-///  ``AuthRequestContext/auth``.
+///  ``AuthRequestContext/identity-swift.property``.
 ///
 /// A simple username, password authenticator could be implemented as follows. If the
 /// authenticator is successful it returns a `User` struct, otherwise it returns `nil`.
 ///
 /// ```swift
-/// struct BasicAuthenticator: AuthenticatorMiddleware {
-///     func authenticate<Context: AuthRequestContext>(request: Request, context: Context) async throws -> User? {
+/// struct BasicAuthenticator<Context: AuthRequestContext>: AuthenticatorMiddleware {
+///     func authenticate(request: Request, context: Context) async throws -> User? {
 ///         // Basic authentication info in the "Authorization" header, is accessible
 ///         // via request.headers.basic
 ///         guard let basic = request.headers.basic else { return nil }
-///         // check if user exists in the database and then verify the entered password
-///         // against the one stored in the database. If it is correct then login in user
-///         let user = try await database.getUserWithUsername(basic.username)
-///         // did we find a user
-///         guard let user = user else { return nil }
+///         // check if user exists in the database
+///         guard let user = try await database.getUserWithUsername(basic.username) else {
+///             return nil
+///         }
 ///         // verify password against password hash stored in database. If valid
 ///         // return the user. HummingbirdAuth provides an implementation of Bcrypt
 ///         // This should be run on the thread pool as it is a long process.
@@ -55,24 +51,24 @@ public protocol Authenticatable: Sendable {}
 ///     }
 /// }
 /// ```
-public protocol AuthenticatorMiddleware: RouterMiddleware where Context: AuthRequestContext {
-    /// type to be authenticated
-    associatedtype Value: Authenticatable
+public protocol AuthenticatorMiddleware: RouterMiddleware where Context: AuthRequestContext<Identity> {
+    /// Type to be authenticated
+    associatedtype Identity: Sendable
     /// Called by middleware to see if request can authenticate.
     ///
-    /// Should return an authenticatable object if authenticated, return nil is not authenticated
+    /// Should return an object if authenticated, return nil is not authenticated
     /// but want the request to be passed onto the next middleware or the router, or throw an error
     ///  if the request should not proceed any further
-    func authenticate(request: Request, context: Context) async throws -> Value?
+    func authenticate(request: Request, context: Context) async throws -> Identity?
 }
 
 extension AuthenticatorMiddleware {
-    /// Calls `authenticate` and if it returns a valid authenticatable object `login` with this object
+    /// Calls `authenticate` and if it returns a valid object `login` with this object
     @inlinable
     public func handle(_ request: Request, context: Context, next: (Request, Context) async throws -> Response) async throws -> Response {
         if let authenticated = try await authenticate(request: request, context: context) {
             var context = context
-            context.auth.login(authenticated)
+            context.identity = authenticated
             return try await next(request, context)
         } else {
             return try await next(request, context)

@@ -21,11 +21,11 @@ import XCTest
 
 final class SessionTests: XCTestCase {
     func testSessionAuthenticator() async throws {
-        struct TestUserRepository: UserSessionRepository {
-            struct User: Authenticatable {
-                let name: String
-            }
+        struct User: Sendable {
+            let name: String
+        }
 
+        struct TestUserRepository: UserSessionRepository {
             static let testSessionId = 89
 
             func getUser(from id: Int, context: UserRepositoryContext) async throws -> User? {
@@ -38,7 +38,7 @@ final class SessionTests: XCTestCase {
 
         let persist = MemoryPersistDriver()
 
-        let router = Router(context: BasicSessionRequestContext<Int>.self)
+        let router = Router(context: BasicSessionRequestContext<Int, User>.self)
         router.addMiddleware {
             SessionMiddleware(storage: persist)
         }
@@ -49,7 +49,9 @@ final class SessionTests: XCTestCase {
         router.group()
             .add(middleware: SessionAuthenticator(users: TestUserRepository()))
             .get("session") { _, context -> HTTPResponse.Status in
-                _ = try context.auth.require(TestUserRepository.User.self)
+                guard context.identity != nil else {
+                    return .unauthorized
+                }
                 return .ok
             }
         let app = Application(responder: router.buildResponder())
@@ -67,13 +69,13 @@ final class SessionTests: XCTestCase {
     }
 
     func testSessionAuthenticatorClosure() async throws {
-        struct User: Authenticatable {
+        struct User: Sendable {
             let name: String
         }
         struct TestSession: Codable {
             let userID: String
         }
-        let router = Router(context: BasicSessionRequestContext<TestSession>.self)
+        let router = Router(context: BasicSessionRequestContext<TestSession, User>.self)
         let persist = MemoryPersistDriver()
         router.addMiddleware {
             SessionMiddleware(storage: persist)
@@ -89,7 +91,9 @@ final class SessionTests: XCTestCase {
                 }
             }
             .get("session") { _, context -> HTTPResponse.Status in
-                _ = try context.auth.require(User.self)
+                guard context.identity != nil else {
+                    return .unauthorized
+                }
                 return .ok
             }
         let app = Application(responder: router.buildResponder())
@@ -107,15 +111,19 @@ final class SessionTests: XCTestCase {
     }
 
     func testSessionUpdate() async throws {
-        struct User: Codable {
+        struct User: Codable, Sendable {
             var name: String
         }
 
-        let router = Router(context: BasicSessionRequestContext<User>.self)
+        let router = Router(context: BasicSessionRequestContext<User, User>.self)
         let persist = MemoryPersistDriver()
         router.add(middleware: SessionMiddleware(storage: persist))
         router.post("save") { request, context -> HTTPResponse.Status in
-            guard let name = request.uri.queryParameters.get("name") else { throw HTTPError(.badRequest) }
+            guard
+                let name = request.uri.queryParameters.get("name")
+            else {
+                throw HTTPError(.badRequest)
+            }
             context.sessions.setSession(User(name: name), expiresIn: .seconds(600))
             return .ok
         }
@@ -152,11 +160,11 @@ final class SessionTests: XCTestCase {
     }
 
     func testSessionDeletion() async throws {
-        struct User: Codable {
+        struct User: Codable, Sendable {
             let name: String
         }
 
-        let router = Router(context: BasicSessionRequestContext<User>.self)
+        let router = Router(context: BasicSessionRequestContext<User, User>.self)
         let persist = MemoryPersistDriver()
         router.add(middleware: SessionMiddleware(storage: persist))
         router.post("login") { request, context -> HTTPResponse.Status in
