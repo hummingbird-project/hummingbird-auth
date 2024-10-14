@@ -14,21 +14,24 @@
 
 import Hummingbird
 import Logging
+import NIOConcurrencyHelpers
 import NIOCore
 
 /// Protocol that all request contexts should conform to if they want to support
 /// authentication middleware
-public protocol AuthRequestContext: RequestContext {
-    /// Login cache
-    var auth: LoginCache { get set }
+public protocol AuthRequestContext<Identity>: RequestContext {
+    associatedtype Identity: Sendable
+
+    /// The authenticated identity
+    var identity: Identity? { get set }
 }
 
-/// Implementation of a basic request context that supports everything the Hummingbird library needs
-public struct BasicAuthRequestContext: AuthRequestContext, RequestContext {
+/// Implementation of a basic request context that supports authenticators
+public struct BasicAuthRequestContext<Identity: Sendable>: AuthRequestContext, RequestContext {
     /// core context
     public var coreContext: CoreRequestContextStorage
-    /// Login cache
-    public var auth: LoginCache
+    /// The authenticated identity
+    public var identity: Identity?
 
     ///  Initialize an `RequestContext`
     /// - Parameters:
@@ -37,6 +40,6 @@ public struct BasicAuthRequestContext: AuthRequestContext, RequestContext {
     ///   - logger: Logger
     public init(source: Source) {
         self.coreContext = .init(source: source)
-        self.auth = .init()
+        self.identity = nil
     }
 }

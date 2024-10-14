@@ -21,16 +21,14 @@ import XCTest
 
 final class SessionTests: XCTestCase {
     func testSessionAuthenticator() async throws {
+        struct User: Sendable {
+            let name: String
+        }
+
         struct TestUserRepository: UserSessionRepository {
-            struct User: Authenticatable {
-                let name: String
-            }
-
-            typealias Identifier = Int
-
             static let testSessionId = 89
 
-            func getUser(from id: Identifier, context: UserRepositoryContext) async throws -> User? {
+            func getUser(from id: Int, context: UserRepositoryContext) async throws -> User? {
                 let user = self.users[id]
                 return user
             }
@@ -38,19 +36,22 @@ final class SessionTests: XCTestCase {
             let users = [Self.testSessionId: User(name: "Adam")]
         }
 
-        let router = Router(context: BasicAuthRequestContext.self)
         let persist = MemoryPersistDriver()
-        let sessions = SessionStorage(persist)
-        router.put("session") { _, _ -> Response in
-            let cookie = try await sessions.save(session: TestUserRepository.testSessionId, expiresIn: .seconds(300))
-            var response = Response(status: .ok)
-            response.setCookie(cookie)
-            return response
+
+        let router = Router(context: BasicSessionRequestContext<Int, User>.self)
+        router.addMiddleware {
+            SessionMiddleware(storage: persist)
+        }
+        router.put("session") { _, context -> Response in
+            context.sessions.setSession(TestUserRepository.testSessionId)
+            return .init(status: .ok)
         }
         router.group()
-            .add(middleware: SessionAuthenticator(users: TestUserRepository(), sessionStorage: sessions))
+            .add(middleware: SessionAuthenticator(users: TestUserRepository()))
             .get("session") { _, context -> HTTPResponse.Status in
-                _ = try context.auth.require(TestUserRepository.User.self)
+                guard context.identity != nil else {
+                    return .unauthorized
+                }
                 return .ok
             }
         let app = Application(responder: router.buildResponder())
@@ -68,26 +69,31 @@ final class SessionTests: XCTestCase {
     }
 
     func testSessionAuthenticatorClosure() async throws {
-        struct User: Authenticatable {
+        struct User: Sendable {
             let name: String
         }
-        let router = Router(context: BasicAuthRequestContext.self)
+        struct TestSession: Codable {
+            let userID: String
+        }
+        let router = Router(context: BasicSessionRequestContext<TestSession, User>.self)
         let persist = MemoryPersistDriver()
-        let sessions = SessionStorage(persist)
-        router.put("session") { _, _ -> Response in
-            let cookie = try await sessions.save(session: 1, expiresIn: .seconds(300))
-            var response = Response(status: .ok)
-            response.setCookie(cookie)
-            return response
+        router.addMiddleware {
+            SessionMiddleware(storage: persist)
+        }
+        router.put("session") { _, context -> HTTPResponse.Status in
+            context.sessions.setSession(.init(userID: "Adam"))
+            return .ok
         }
         router.group()
-            .add(
-                middleware: SessionAuthenticator(sessionStorage: sessions) { (_: Int, _) in
-                    User(name: "Adam")
+            .addMiddleware {
+                SessionAuthenticator { session, _ -> User? in
+                    return User(name: session.userID)
                 }
-            )
+            }
             .get("session") { _, context -> HTTPResponse.Status in
-                _ = try context.auth.require(User.self)
+                guard context.identity != nil else {
+                    return .unauthorized
+                }
                 return .ok
             }
         let app = Application(responder: router.buildResponder())
@@ -105,27 +111,31 @@ final class SessionTests: XCTestCase {
     }
 
     func testSessionUpdate() async throws {
-        struct User: Codable {
-            let name: String
+        struct User: Codable, Sendable {
+            var name: String
         }
 
-        let router = Router(context: BasicAuthRequestContext.self)
+        let router = Router(context: BasicSessionRequestContext<User, User>.self)
         let persist = MemoryPersistDriver()
-        let sessions = SessionStorage(persist)
-        router.post("save") { request, _ -> Response in
-            guard let name = request.uri.queryParameters.get("name") else { throw HTTPError(.badRequest) }
-            let cookie = try await sessions.save(session: User(name: name), expiresIn: .seconds(600))
-            var response = Response(status: .ok)
-            response.setCookie(cookie)
-            return response
-        }
-        router.post("update") { request, _ -> HTTPResponse.Status in
-            guard let name = request.uri.queryParameters.get("name") else { throw HTTPError(.badRequest) }
-            try await sessions.update(session: User(name: name), expiresIn: .seconds(600), request: request)
+        router.add(middleware: SessionMiddleware(storage: persist))
+        router.post("save") { request, context -> HTTPResponse.Status in
+            guard
+                let name = request.uri.queryParameters.get("name")
+            else {
+                throw HTTPError(.badRequest)
+            }
+            context.sessions.setSession(User(name: name), expiresIn: .seconds(600))
             return .ok
         }
-        router.get("name") { request, _ -> String in
-            guard let user = try await sessions.load(as: User.self, request: request) else { throw HTTPError(.unauthorized) }
+        router.post("update") { request, context -> HTTPResponse.Status in
+            guard let name = request.uri.queryParameters.get("name") else { throw HTTPError(.badRequest) }
+            context.sessions.withLockedSession { session in
+                session?.name = name
+            }
+            return .ok
+        }
+        router.get("name") { _, context -> String in
+            guard let user = context.sessions.session else { throw HTTPError(.unauthorized) }
             return user.name
         }
         let app = Application(responder: router.buildResponder())
@@ -149,24 +159,46 @@ final class SessionTests: XCTestCase {
         }
     }
 
-    func testSessionUpdateError() async throws {
-        let router = Router(context: BasicAuthRequestContext.self)
-        let persist = MemoryPersistDriver()
-        let sessions = SessionStorage(persist)
+    func testSessionDeletion() async throws {
+        struct User: Codable, Sendable {
+            let name: String
+        }
 
-        router.post("update") { request, _ -> HTTPResponse.Status in
-            do {
-                try await sessions.update(session: "hello", expiresIn: .seconds(600), request: request)
-                return .ok
-            } catch {
-                return .badRequest
-            }
+        let router = Router(context: BasicSessionRequestContext<User, User>.self)
+        let persist = MemoryPersistDriver()
+        router.add(middleware: SessionMiddleware(storage: persist))
+        router.post("login") { request, context -> HTTPResponse.Status in
+            guard let name = request.uri.queryParameters.get("name") else { throw HTTPError(.badRequest) }
+            context.sessions.setSession(User(name: name), expiresIn: .seconds(600))
+            return .ok
+        }
+        router.post("logout") { _, context -> HTTPResponse.Status in
+            context.sessions.clearSession()
+            return .ok
+        }
+        router.get("name") { _, context -> String in
+            guard let user = context.sessions.session else { throw HTTPError(.unauthorized) }
+            return user.name
         }
         let app = Application(responder: router.buildResponder())
 
         try await app.test(.router) { client in
-            try await client.execute(uri: "/update", method: .post) { response in
-                XCTAssertEqual(response.status, .badRequest)
+            let cookies = try await client.execute(uri: "/login?name=john", method: .post) { response -> String? in
+                XCTAssertEqual(response.status, .ok)
+                return response.headers[.setCookie]
+            }
+            // get username
+            try await client.execute(uri: "/name", method: .get, headers: cookies.map { [.cookie: $0] } ?? [:]) { response in
+                XCTAssertEqual(response.status, .ok)
+                XCTAssertEqual(String(buffer: response.body), "john")
+            }
+            let cookies2 = try await client.execute(uri: "/logout", method: .post) { response -> String? in
+                XCTAssertEqual(response.status, .ok)
+                return response.headers[.setCookie]
+            }
+            // get username
+            try await client.execute(uri: "/name", method: .get, headers: cookies2.map { [.cookie: $0] } ?? [:]) { response in
+                XCTAssertEqual(response.status, .unauthorized)
             }
         }
     }

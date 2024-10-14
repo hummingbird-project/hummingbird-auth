@@ -28,7 +28,7 @@ public struct UserRepositoryContext {
 /// Repository of users identified by a session object
 public protocol UserSessionRepository<Identifier, User>: Sendable {
     associatedtype Identifier: Codable
-    associatedtype User: Authenticatable
+    associatedtype User: Sendable
 
     ///  Get user from repository
     /// - Parameters:
@@ -39,7 +39,7 @@ public protocol UserSessionRepository<Identifier, User>: Sendable {
 }
 
 /// Implementation of UserRepository that uses a closure
-public struct UserSessionClosureRepository<Identifier: Codable, User: Authenticatable>: UserSessionRepository {
+public struct UserSessionClosureRepository<Identifier: Codable, User: Sendable>: UserSessionRepository {
     @usableFromInline
     let getUserClosure: @Sendable (Identifier, UserRepositoryContext) async throws -> User?
 
