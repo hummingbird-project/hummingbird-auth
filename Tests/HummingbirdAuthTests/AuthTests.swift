@@ -165,9 +165,7 @@ final class AuthTests: XCTestCase {
                 return User(name: user)
             })
             .get("authenticate") { _, context in
-                guard let user = context.identity else {
-                    throw HTTPError(.unauthorized)
-                }
+                let user = try context.requireIdentity()
                 return user.name
             }
         let app = Application(responder: router.buildResponder())

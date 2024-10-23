@@ -26,6 +26,16 @@ public protocol AuthRequestContext<Identity>: RequestContext {
     var identity: Identity? { get set }
 }
 
+extension AuthRequestContext {
+    /// Return Identity attached to context.
+    ///
+    /// If Identity does not exist then throw a 401 (Unauthorized) status
+    public func requireIdentity() throws -> Identity {
+        guard let identity = self.identity else { throw HTTPError(.unauthorized, message: "Authenticated identity is unavailable") }
+        return identity
+    }
+}
+
 /// Implementation of a basic request context that supports authenticators
 public struct BasicAuthRequestContext<Identity: Sendable>: AuthRequestContext, RequestContext {
     /// core context
