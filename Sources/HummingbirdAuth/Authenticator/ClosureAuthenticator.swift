@@ -15,6 +15,7 @@
 import Hummingbird
 import NIOCore
 
+/// Authenticator that uses a closure to return authentication state
 public struct ClosureAuthenticator<
     Context: AuthRequestContext
 >: AuthenticatorMiddleware {
