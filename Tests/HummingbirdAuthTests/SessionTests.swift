@@ -12,7 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-import Hummingbird
+@testable import Hummingbird
 import HummingbirdAuth
 import HummingbirdAuthTesting
 import HummingbirdTesting
@@ -199,6 +199,50 @@ final class SessionTests: XCTestCase {
             // get username
             try await client.execute(uri: "/name", method: .get, headers: cookies2.map { [.cookie: $0] } ?? [:]) { response in
                 XCTAssertEqual(response.status, .unauthorized)
+            }
+        }
+    }
+
+    func testSessionCookieParameters() async throws {
+        struct User: Codable, Sendable {
+            var name: String
+        }
+
+        let router = Router(context: BasicSessionRequestContext<User, User>.self)
+        let persist = MemoryPersistDriver()
+        router.add(
+            middleware: SessionMiddleware(
+                storage: persist,
+                sessionCookieParameters: .init(
+                    name: "TEST_SESSION_COOKIE",
+                    domain: "https://test.com",
+                    path: "/test",
+                    secure: true,
+                    sameSite: .secure
+                )
+            )
+        )
+        router.post("save") { request, context -> HTTPResponse.Status in
+            guard
+                let name = request.uri.queryParameters.get("name")
+            else {
+                throw HTTPError(.badRequest)
+            }
+            context.sessions.setSession(User(name: name), expiresIn: .seconds(600))
+            return .ok
+        }
+        let app = Application(responder: router.buildResponder())
+
+        try await app.test(.router) { client in
+            try await client.execute(uri: "/save?name=john", method: .post) { response in
+                XCTAssertEqual(response.status, .ok)
+                let setCookieHeader = try XCTUnwrap(response.headers[.setCookie])
+                let cookie = try XCTUnwrap(Cookie(from: setCookieHeader[...]))
+                XCTAssertEqual(cookie.name, "TEST_SESSION_COOKIE")
+                XCTAssertEqual(cookie.domain, "https://test.com")
+                XCTAssertEqual(cookie.path, "/test")
+                XCTAssertEqual(cookie.secure, true)
+                XCTAssertEqual(cookie.sameSite, .secure)
             }
         }
     }
