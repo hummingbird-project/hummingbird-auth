@@ -20,8 +20,6 @@ jobs:
     strategy:
       matrix:
         image: ["swift:5.9", "swift:5.10", "swift:6.0"]
-        
-    
     container:
       image: ${{ matrix.image }}
     steps:
@@ -38,6 +36,6 @@ jobs:
           -ignore-filename-regex="\/Benchmarks\/" \
           -instr-profile .build/debug/codecov/default.profdata > info.lcov
     - name: Upload to codecov.io
-      uses: codecov/codecov-action@v4
+      uses: codecov/codecov-action@v5
       with:
         file: info.lcov
