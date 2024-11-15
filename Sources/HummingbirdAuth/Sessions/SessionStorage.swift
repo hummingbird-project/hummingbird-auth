@@ -13,7 +13,31 @@
 //===----------------------------------------------------------------------===//
 
 import ExtrasBase64
+import Foundation
 import Hummingbird
+
+/// Session cookie parameters
+public struct SessionCookieParameters: Sendable {
+    public var name: String
+    public var domain: String?
+    public var path: String?
+    public var secure: Bool
+    public var sameSite: Cookie.SameSite?
+
+    public init(
+        name: String = "SESSION_ID",
+        domain: String? = nil,
+        path: String = "/",
+        secure: Bool = false,
+        sameSite: Cookie.SameSite? = nil
+    ) {
+        self.name = name
+        self.domain = domain
+        self.path = path
+        self.secure = secure
+        self.sameSite = sameSite
+    }
+}
 
 /// Stores session data
 public struct SessionStorage<SessionType: Codable>: Sendable {
@@ -32,13 +56,28 @@ public struct SessionStorage<SessionType: Codable>: Sendable {
         public static var sessionDoesNotExist: Self { .init(.sessionDoesNotExist) }
     }
 
-    let sessionCookie: String
+    let sessionCookieParameters: SessionCookieParameters
     let storage: any PersistDriver
 
     /// Initialize session storage
+    /// - Parameters:
+    ///   - storage: Session cookie storage
+    ///   - sessionCookie: Session cookie name
     public init(_ storage: any PersistDriver, sessionCookie: String = "SESSION_ID") {
         self.storage = storage
-        self.sessionCookie = sessionCookie
+        self.sessionCookieParameters = .init(name: sessionCookie)
+    }
+
+    /// Initialize session storage
+    /// - Parameters:
+    ///   - storage: Session cookie storage
+    ///   - sessionCookieParameters: Session cookie parameters
+    public init(
+        _ storage: any PersistDriver,
+        sessionCookieParameters: SessionCookieParameters
+    ) {
+        self.storage = storage
+        self.sessionCookieParameters = sessionCookieParameters
     }
 
     /// save new or exising session
@@ -57,13 +96,15 @@ public struct SessionStorage<SessionType: Codable>: Sendable {
     /// ``SessionStorage/update(session:expiresIn:request:)``.
     public func save(session: SessionType, expiresIn: Duration) async throws -> Cookie {
         let sessionId = Self.createSessionId()
+        // accuracy of expires value in cookie only needs to be seconds
+        let expires = Date.now + TimeInterval(expiresIn.components.seconds)
         // prefix with "hbs."
         try await self.storage.set(
             key: "hbs.\(sessionId)",
             value: session,
             expires: expiresIn
         )
-        return .init(name: self.sessionCookie, value: sessionId, path: "/")
+        return self.createSessionCookie(value: sessionId, expires: expires)
     }
 
     /// update existing session
@@ -102,12 +143,12 @@ public struct SessionStorage<SessionType: Codable>: Sendable {
         try await self.storage.remove(
             key: "hbs.\(sessionId)"
         )
-        return .init(name: self.sessionCookie, value: sessionId, expires: .now, path: "/")
+        return self.createSessionCookie(value: sessionId, expires: .now)
     }
 
     /// Get session id gets id from request
     public func getId(request: Request) -> String? {
-        guard let sessionCookie = request.cookies[self.sessionCookie]?.value else { return nil }
+        guard let sessionCookie = request.cookies[self.sessionCookieParameters.name]?.value else { return nil }
         return String(sessionCookie)
     }
 
@@ -115,5 +156,28 @@ public struct SessionStorage<SessionType: Codable>: Sendable {
     static func createSessionId() -> String {
         let bytes: [UInt8] = (0..<32).map { _ in UInt8.random(in: 0...255) }
         return String(base64Encoding: bytes)
+    }
+
+    func createSessionCookie(value: String, expires: Date) -> Cookie {
+        if let sameSite = self.sessionCookieParameters.sameSite {
+            return Cookie(
+                name: self.sessionCookieParameters.name,
+                value: value,
+                expires: expires,
+                domain: self.sessionCookieParameters.domain,
+                path: self.sessionCookieParameters.path,
+                secure: self.sessionCookieParameters.secure,
+                sameSite: sameSite
+            )
+        } else {
+            return Cookie(
+                name: self.sessionCookieParameters.name,
+                value: value,
+                expires: expires,
+                domain: self.sessionCookieParameters.domain,
+                path: self.sessionCookieParameters.path,
+                secure: self.sessionCookieParameters.secure
+            )
+        }
     }
 }
