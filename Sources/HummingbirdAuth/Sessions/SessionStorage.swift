@@ -18,11 +18,11 @@ import Hummingbird
 
 /// Session cookie parameters
 public struct SessionCookieParameters: Sendable {
-    let name: String
-    let domain: String?
-    let path: String?
-    let secure: Bool
-    let sameSite: Cookie.SameSite?
+    public var name: String
+    public var domain: String?
+    public var path: String?
+    public var secure: Bool
+    public var sameSite: Cookie.SameSite?
 
     public init(
         name: String = "SESSION_ID",
