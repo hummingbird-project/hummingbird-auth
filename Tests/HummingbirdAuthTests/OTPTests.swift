@@ -12,7 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-import OTP
+import HummingbirdOTP
 import XCTest
 
 final class OTPTests: XCTestCase {

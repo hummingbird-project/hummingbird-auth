@@ -9,8 +9,8 @@ let package = Package(
     products: [
         .library(name: "HummingbirdAuth", targets: ["HummingbirdAuth"]),
         .library(name: "HummingbirdBasicAuth", targets: ["HummingbirdBasicAuth"]),
-        .library(name: "Bcrypt", targets: ["Bcrypt"]),
-        .library(name: "OTP", targets: ["OTP"]),
+        .library(name: "HummingbirdBcrypt", targets: ["HummingbirdBcrypt"]),
+        .library(name: "HummingbirdOTP", targets: ["HummingbirdOTP"]),
         .library(name: "HummingbirdAuthTesting", targets: ["HummingbirdAuthTesting"]),
     ],
     dependencies: [
@@ -25,14 +25,14 @@ let package = Package(
             .product(name: "ExtrasBase64", package: "swift-extras-base64"),
         ]),
         .target(name: "HummingbirdBasicAuth", dependencies: [
-            .byName(name: "Bcrypt"),
             .byName(name: "HummingbirdAuth"),
+            .byName(name: "HummingbirdBcrypt"),
             .product(name: "Hummingbird", package: "hummingbird"),
         ]),
-        .target(name: "Bcrypt", dependencies: [
+        .target(name: "HummingbirdBcrypt", dependencies: [
             .byName(name: "CBcrypt"),
         ]),
-        .target(name: "OTP", dependencies: [
+        .target(name: "HummingbirdOTP", dependencies: [
             .product(name: "Crypto", package: "swift-crypto"),
             .product(name: "ExtrasBase64", package: "swift-extras-base64"),
         ]),
@@ -42,10 +42,10 @@ let package = Package(
         ]),
         .target(name: "CBcrypt", dependencies: []),
         .testTarget(name: "HummingbirdAuthTests", dependencies: [
-            .byName(name: "Bcrypt"),
             .byName(name: "HummingbirdAuth"),
             .byName(name: "HummingbirdBasicAuth"),
-            .byName(name: "OTP"),
+            .byName(name: "HummingbirdBcrypt"),
+            .byName(name: "HummingbirdOTP"),
             .byName(name: "HummingbirdAuthTesting"),
             .product(name: "HummingbirdTesting", package: "hummingbird"),
             .product(name: "NIOPosix", package: "swift-nio"),

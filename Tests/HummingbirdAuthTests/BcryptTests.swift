@@ -12,10 +12,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-import Bcrypt
 import Hummingbird
 import HummingbirdAuth
 import HummingbirdAuthTesting
+import HummingbirdBcrypt
 import HummingbirdTesting
 import NIOPosix
 import XCTest
