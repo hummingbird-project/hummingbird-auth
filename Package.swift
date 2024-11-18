@@ -25,8 +25,8 @@ let package = Package(
             .product(name: "ExtrasBase64", package: "swift-extras-base64"),
         ]),
         .target(name: "HummingbirdBasicAuth", dependencies: [
-            .byName(name: "Bcrypt"),
             .byName(name: "HummingbirdAuth"),
+            .byName(name: "HummingbirdBcrypt"),
             .product(name: "Hummingbird", package: "hummingbird"),
         ]),
         .target(name: "HummingbirdBcrypt", dependencies: [
@@ -42,9 +42,9 @@ let package = Package(
         ]),
         .target(name: "CBcrypt", dependencies: []),
         .testTarget(name: "HummingbirdAuthTests", dependencies: [
-            .byName(name: "HummingbirdBcrypt"),
             .byName(name: "HummingbirdAuth"),
             .byName(name: "HummingbirdBasicAuth"),
+            .byName(name: "HummingbirdBcrypt"),
             .byName(name: "HummingbirdOTP"),
             .byName(name: "HummingbirdAuthTesting"),
             .product(name: "HummingbirdTesting", package: "hummingbird"),

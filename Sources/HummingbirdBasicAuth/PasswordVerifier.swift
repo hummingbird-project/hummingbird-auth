@@ -12,7 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-import Bcrypt
+import HummingbirdBcrypt
 import NIOPosix
 
 /// Protocol for password verifier
