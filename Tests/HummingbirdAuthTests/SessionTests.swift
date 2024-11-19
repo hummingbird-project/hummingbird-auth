@@ -218,7 +218,7 @@ final class SessionTests: XCTestCase {
                     domain: "https://test.com",
                     path: "/test",
                     secure: true,
-                    sameSite: .secure
+                    sameSite: .strict
                 )
             )
         )
@@ -242,7 +242,7 @@ final class SessionTests: XCTestCase {
                 XCTAssertEqual(cookie.domain, "https://test.com")
                 XCTAssertEqual(cookie.path, "/test")
                 XCTAssertEqual(cookie.secure, true)
-                XCTAssertEqual(cookie.sameSite, .secure)
+                XCTAssertEqual(cookie.sameSite, .strict)
             }
         }
     }
@@ -266,6 +266,10 @@ final class SessionTests: XCTestCase {
         try await app.test(.router) { client in
             try await client.execute(uri: "/test", method: .post, headers: [.cookie: cookie.description]) { response in
                 XCTAssertEqual(response.status, .noContent)
+                let setCookieHeader = try XCTUnwrap(response.headers[.setCookie])
+                let cookie = Cookie(from: setCookieHeader[...])
+                let expires = try XCTUnwrap(cookie?.expires)
+                XCTAssertLessThanOrEqual(expires, .now)
             }
         }
     }
