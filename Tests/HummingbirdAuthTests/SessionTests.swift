@@ -218,7 +218,7 @@ final class SessionTests: XCTestCase {
                     domain: "https://test.com",
                     path: "/test",
                     secure: true,
-                    sameSite: .secure
+                    sameSite: .strict
                 )
             )
         )
@@ -242,7 +242,34 @@ final class SessionTests: XCTestCase {
                 XCTAssertEqual(cookie.domain, "https://test.com")
                 XCTAssertEqual(cookie.path, "/test")
                 XCTAssertEqual(cookie.secure, true)
-                XCTAssertEqual(cookie.sameSite, .secure)
+                XCTAssertEqual(cookie.sameSite, .strict)
+            }
+        }
+    }
+
+    /// Save session as one type and retrieve as another.
+    func testInvalidSession() async throws {
+        struct User: Codable, Sendable {
+            let name: String
+        }
+
+        let router = Router(context: BasicSessionRequestContext<UUID, User>.self)
+        let persist = MemoryPersistDriver()
+        let sessionStorage = SessionStorage<Int>(persist)
+        let cookie = try await sessionStorage.save(session: 1, expiresIn: .seconds(60))
+        router.add(middleware: SessionMiddleware(storage: persist))
+        router.post("test") { _, context in
+            return context.sessions.session?.description
+        }
+        let app = Application(responder: router.buildResponder())
+
+        try await app.test(.router) { client in
+            try await client.execute(uri: "/test", method: .post, headers: [.cookie: cookie.description]) { response in
+                XCTAssertEqual(response.status, .noContent)
+                let setCookieHeader = try XCTUnwrap(response.headers[.setCookie])
+                let cookie = Cookie(from: setCookieHeader[...])
+                let expires = try XCTUnwrap(cookie?.expires)
+                XCTAssertLessThanOrEqual(expires, .now)
             }
         }
     }

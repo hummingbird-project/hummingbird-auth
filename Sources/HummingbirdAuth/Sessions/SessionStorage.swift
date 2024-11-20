@@ -45,6 +45,7 @@ public struct SessionStorage<SessionType: Codable>: Sendable {
     public struct Error: Swift.Error, Equatable {
         enum ErrorType {
             case sessionDoesNotExist
+            case sessionInvalidType
         }
 
         let type: ErrorType
@@ -54,6 +55,8 @@ public struct SessionStorage<SessionType: Codable>: Sendable {
 
         /// Session does not exist
         public static var sessionDoesNotExist: Self { .init(.sessionDoesNotExist) }
+        /// Session was an invalid type
+        public static var sessionInvalidType: Self { .init(.sessionInvalidType) }
     }
 
     let sessionCookieParameters: SessionCookieParameters
@@ -125,11 +128,15 @@ public struct SessionStorage<SessionType: Codable>: Sendable {
     /// load session
     public func load(request: Request) async throws -> SessionType? {
         guard let sessionId = getId(request: request) else { return nil }
-        // prefix with "hbs."
-        return try await self.storage.get(
-            key: "hbs.\(sessionId)",
-            as: SessionType.self
-        )
+        do {
+            // prefix with "hbs."
+            return try await self.storage.get(
+                key: "hbs.\(sessionId)",
+                as: SessionType.self
+            )
+        } catch let error as PersistError where error == .invalidConversion {
+            throw Error.sessionInvalidType
+        }
     }
 
     /// Delete session
