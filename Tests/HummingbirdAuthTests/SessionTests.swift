@@ -134,6 +134,11 @@ final class SessionTests: XCTestCase {
             }
             return .ok
         }
+        router.post("updateExpires") { request, context -> HTTPResponse.Status in
+            guard let name = request.uri.queryParameters.get("name") else { throw HTTPError(.badRequest) }
+            context.sessions.setSession(.init(name: name), expiresIn: .seconds(600))
+            return .ok
+        }
         router.get("name") { _, context -> String in
             guard let user = context.sessions.session else { throw HTTPError(.unauthorized) }
             return user.name
@@ -141,7 +146,7 @@ final class SessionTests: XCTestCase {
         let app = Application(responder: router.buildResponder())
 
         try await app.test(.router) { client in
-            let cookies = try await client.execute(uri: "/save?name=john", method: .post) { response -> String? in
+            var cookies = try await client.execute(uri: "/save?name=john", method: .post) { response -> String? in
                 XCTAssertEqual(response.status, .ok)
                 return response.headers[.setCookie]
             }
@@ -149,12 +154,21 @@ final class SessionTests: XCTestCase {
                 XCTAssertEqual(response.status, .ok)
                 XCTAssertNil(response.headers[.setCookie])
             }
-
             // get save username
             try await client.execute(uri: "/name", method: .get, headers: cookies.map { [.cookie: $0] } ?? [:]) { response in
                 XCTAssertEqual(response.status, .ok)
                 let buffer = try XCTUnwrap(response.body)
                 XCTAssertEqual(String(buffer: buffer), "jane")
+            }
+            cookies = try await client.execute(uri: "/updateExpires?name=joan", method: .post, headers: cookies.map { [.cookie: $0] } ?? [:]) { response in
+                XCTAssertEqual(response.status, .ok)
+                return try XCTUnwrap(response.headers[.setCookie])
+            }
+            // get save username
+            try await client.execute(uri: "/name", method: .get, headers: cookies.map { [.cookie: $0] } ?? [:]) { response in
+                XCTAssertEqual(response.status, .ok)
+                let buffer = try XCTUnwrap(response.body)
+                XCTAssertEqual(String(buffer: buffer), "joan")
             }
         }
     }

@@ -99,15 +99,13 @@ public struct SessionStorage<SessionType: Codable>: Sendable {
     /// ``SessionStorage/update(session:expiresIn:request:)``.
     public func save(session: SessionType, expiresIn: Duration) async throws -> Cookie {
         let sessionId = Self.createSessionId()
-        // accuracy of expires value in cookie only needs to be seconds
-        let expires = Date.now + TimeInterval(expiresIn.components.seconds)
         // prefix with "hbs."
         try await self.storage.set(
             key: "hbs.\(sessionId)",
             value: session,
             expires: expiresIn
         )
-        return self.createSessionCookie(value: sessionId, expires: expires)
+        return self.createSessionCookie(sessionId: sessionId, expiresIn: expiresIn)
     }
 
     /// update existing session
@@ -123,6 +121,23 @@ public struct SessionStorage<SessionType: Codable>: Sendable {
             value: session,
             expires: expiresIn
         )
+    }
+
+    /// update existing session and return cookie if expiration date is set
+    ///
+    /// If session does not exist then a `sessionDoesNotExist` error will be thrown
+    public func updateAndReturnCookie(session: SessionType, expiresIn: Duration?, request: Request) async throws -> Cookie? {
+        guard let sessionId = self.getId(request: request) else {
+            throw Error.sessionDoesNotExist
+        }
+        // prefix with "hbs."
+        try await self.storage.set(
+            key: "hbs.\(sessionId)",
+            value: session,
+            expires: expiresIn
+        )
+        guard let expiresIn else { return nil }
+        return self.createSessionCookie(sessionId: sessionId, expiresIn: expiresIn)
     }
 
     /// load session
@@ -150,7 +165,7 @@ public struct SessionStorage<SessionType: Codable>: Sendable {
         try await self.storage.remove(
             key: "hbs.\(sessionId)"
         )
-        return self.createSessionCookie(value: sessionId, expires: .now)
+        return self.createSessionCookie(sessionId: sessionId, expiresIn: .seconds(0))
     }
 
     /// Get session id gets id from request
@@ -165,11 +180,13 @@ public struct SessionStorage<SessionType: Codable>: Sendable {
         return String(base64Encoding: bytes)
     }
 
-    func createSessionCookie(value: String, expires: Date) -> Cookie {
+    func createSessionCookie(sessionId: String, expiresIn: Duration) -> Cookie {
+        // accuracy of expires value in cookie only needs to be seconds
+        let expires = Date.now + TimeInterval(expiresIn.components.seconds)
         if let sameSite = self.sessionCookieParameters.sameSite {
             return Cookie(
                 name: self.sessionCookieParameters.name,
-                value: value,
+                value: sessionId,
                 expires: expires,
                 domain: self.sessionCookieParameters.domain,
                 path: self.sessionCookieParameters.path,
@@ -179,7 +196,7 @@ public struct SessionStorage<SessionType: Codable>: Sendable {
         } else {
             return Cookie(
                 name: self.sessionCookieParameters.name,
-                value: value,
+                value: sessionId,
                 expires: expires,
                 domain: self.sessionCookieParameters.domain,
                 path: self.sessionCookieParameters.path,
