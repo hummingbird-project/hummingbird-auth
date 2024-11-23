@@ -126,7 +126,7 @@ public struct SessionStorage<SessionType: Codable>: Sendable {
     /// update existing session and return cookie if expiration date is set
     ///
     /// If session does not exist then a `sessionDoesNotExist` error will be thrown
-    public func updateAndReturnCookie(session: SessionType, expiresIn: Duration?, request: Request) async throws -> Cookie? {
+    internal func updateAndCreateCookie(session: SessionType, expiresIn: Duration?, request: Request) async throws -> Cookie? {
         guard let sessionId = self.getId(request: request) else {
             throw Error.sessionDoesNotExist
         }

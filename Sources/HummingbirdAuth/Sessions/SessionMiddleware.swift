@@ -82,7 +82,7 @@ public struct SessionMiddleware<Context: SessionRequestContext>: RouterMiddlewar
             // if session has been edited then store new session
             if sessionData.edited {
                 do {
-                    if let cookie = try await self.sessionStorage.updateAndReturnCookie(
+                    if let cookie = try await self.sessionStorage.updateAndCreateCookie(
                         session: sessionData.object,
                         expiresIn: sessionData.expiresIn,
                         request: request
