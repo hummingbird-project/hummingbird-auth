@@ -146,26 +146,32 @@ final class SessionTests: XCTestCase {
         let app = Application(responder: router.buildResponder())
 
         try await app.test(.router) { client in
-            var cookies = try await client.execute(uri: "/save?name=john", method: .post) { response -> String? in
+            var cookie = try await client.execute(uri: "/save?name=john", method: .post) { response -> String in
                 XCTAssertEqual(response.status, .ok)
-                return response.headers[.setCookie]
+                return try XCTUnwrap(response.headers[.setCookie])
             }
-            try await client.execute(uri: "/update?name=jane", method: .post, headers: cookies.map { [.cookie: $0] } ?? [:]) { response in
+            try await client.execute(uri: "/update?name=jane", method: .post, headers: [.cookie: cookie]) { response in
                 XCTAssertEqual(response.status, .ok)
                 XCTAssertNil(response.headers[.setCookie])
             }
             // get save username
-            try await client.execute(uri: "/name", method: .get, headers: cookies.map { [.cookie: $0] } ?? [:]) { response in
+            try await client.execute(uri: "/name", method: .get, headers: [.cookie: cookie]) { response in
                 XCTAssertEqual(response.status, .ok)
                 let buffer = try XCTUnwrap(response.body)
                 XCTAssertEqual(String(buffer: buffer), "jane")
             }
-            cookies = try await client.execute(uri: "/updateExpires?name=joan", method: .post, headers: cookies.map { [.cookie: $0] } ?? [:]) { response in
+            cookie = try await client.execute(uri: "/updateExpires?name=joan", method: .post, headers: [.cookie: cookie]) { response in
                 XCTAssertEqual(response.status, .ok)
-                return try XCTUnwrap(response.headers[.setCookie])
+                // if we update the cookie expiration date a set-cookie header should be returned
+                let newCookieHeader = try XCTUnwrap(response.headers[.setCookie])
+                // check we are updating the existing cookie
+                let cookieCookie = try XCTUnwrap(Cookie(from: cookie[...]))
+                let newCookie = try XCTUnwrap(Cookie(from: newCookieHeader[...]))
+                XCTAssertEqual(cookieCookie.value, newCookie.value)
+                return newCookieHeader
             }
             // get save username
-            try await client.execute(uri: "/name", method: .get, headers: cookies.map { [.cookie: $0] } ?? [:]) { response in
+            try await client.execute(uri: "/name", method: .get, headers: [.cookie: cookie]) { response in
                 XCTAssertEqual(response.status, .ok)
                 let buffer = try XCTUnwrap(response.body)
                 XCTAssertEqual(String(buffer: buffer), "joan")
