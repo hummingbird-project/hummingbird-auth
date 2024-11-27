@@ -44,7 +44,11 @@ public struct SessionMiddleware<Context: SessionRequestContext>: RouterMiddlewar
     ///   - storage: Persist driver to use for storage
     ///   - sessionCookieParameters: Session cookie parameters
     ///   - defaultSessionExpiration: Default expiration for session data
-    public init(storage: any PersistDriver, sessionCookieParameters: SessionCookieParameters, defaultSessionExpiration: Duration = .seconds(60 * 60 * 12)) {
+    public init(
+        storage: any PersistDriver,
+        sessionCookieParameters: SessionCookieParameters,
+        defaultSessionExpiration: Duration = .seconds(60 * 60 * 12)
+    ) {
         self.sessionStorage = .init(storage, sessionCookieParameters: sessionCookieParameters)
         self.defaultSessionExpiration = defaultSessionExpiration
     }

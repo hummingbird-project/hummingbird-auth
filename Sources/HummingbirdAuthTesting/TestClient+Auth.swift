@@ -21,20 +21,25 @@ import XCTest
 public struct TestAuthentication: Equatable {
     /// create basic authentication test
     public static func basic(username: String, password: String) -> Self {
-        return .init(value: .basic(username: username, password: password))
+        .init(value: .basic(username: username, password: password))
     }
 
     /// create bearer authentication test
     public static func bearer(_ token: String) -> Self {
-        return .init(value: .bearer(token))
+        .init(value: .bearer(token))
     }
 
     /// create cookie authentication test
     public static func cookie(name: String, value: String) -> Self {
-        return .init(value: .cookie(name: name, value: value))
+        .init(value: .cookie(name: name, value: value))
     }
 
-    func apply(uri: String, method: HTTPRequest.Method, headers: HTTPFields, body: ByteBuffer?) -> (uri: String, method: HTTPRequest.Method, headers: HTTPFields, body: ByteBuffer?) {
+    func apply(
+        uri: String,
+        method: HTTPRequest.Method,
+        headers: HTTPFields,
+        body: ByteBuffer?
+    ) -> (uri: String, method: HTTPRequest.Method, headers: HTTPFields, body: ByteBuffer?) {
         switch self.value {
         case .basic(let username, let password):
             var headers = headers
