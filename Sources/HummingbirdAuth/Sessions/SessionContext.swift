@@ -106,8 +106,8 @@ public struct SessionContext<Session: Sendable & Codable>: Sendable {
 
     /// Internal access to full session data. Used by `SessionMiddleware`.
     var sessionData: SessionData<Session>? {
-        get { self._storage.withLockedValue { $0 }}
-        nonmutating set { self._storage.withLockedValue { $0 = newValue }}
+        get { self._storage.withLockedValue { $0 } }
+        nonmutating set { self._storage.withLockedValue { $0 = newValue } }
     }
 }
 

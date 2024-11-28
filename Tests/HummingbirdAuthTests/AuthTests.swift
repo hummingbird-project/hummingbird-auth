@@ -28,7 +28,7 @@ final class AuthTests: XCTestCase {
         }
         let router = Router(context: BasicAuthRequestContext<User>.self)
         router.get { request, _ -> String? in
-            return request.headers.bearer?.token
+            request.headers.bearer?.token
         }
         let app = Application(responder: router.buildResponder())
         try await app.test(.router) { client in
@@ -48,7 +48,7 @@ final class AuthTests: XCTestCase {
         }
         let router = Router(context: BasicAuthRequestContext<User>.self)
         router.get { request, _ -> String? in
-            return request.headers.basic.map { "\($0.username):\($0.password)" }
+            request.headers.basic.map { "\($0.username):\($0.password)" }
         }
         let app = Application(responder: router.buildResponder())
         try await app.test(.router) { client in
@@ -160,10 +160,12 @@ final class AuthTests: XCTestCase {
         }
         let router = Router(context: BasicAuthRequestContext<User>.self)
         router.group()
-            .add(middleware: ClosureAuthenticator { request, _ -> User? in
-                guard let user = request.uri.queryParameters.get("user") else { return nil }
-                return User(name: user)
-            })
+            .add(
+                middleware: ClosureAuthenticator { request, _ -> User? in
+                    guard let user = request.uri.queryParameters.get("user") else { return nil }
+                    return User(name: user)
+                }
+            )
             .get("authenticate") { _, context in
                 let user = try context.requireIdentity()
                 return user.name
@@ -195,12 +197,12 @@ final class AuthTests: XCTestCase {
             .add(middleware: TestAuthenticator())
             .add(middleware: IsAuthenticatedMiddleware())
             .get("authenticated") { _, _ -> HTTPResponse.Status in
-                return .ok
+                .ok
             }
         router.group()
             .add(middleware: IsAuthenticatedMiddleware())
             .get("unauthenticated") { _, _ -> HTTPResponse.Status in
-                return .ok
+                .ok
             }
         let app = Application(responder: router.buildResponder())
 
@@ -222,7 +224,7 @@ final class AuthTests: XCTestCase {
 
         struct MyUserRepository: UserPasswordRepository {
             func getUser(named username: String, context: UserRepositoryContext) -> User? {
-                return self.users[username].map { .init(username: username, passwordHash: $0) }
+                self.users[username].map { .init(username: username, passwordHash: $0) }
             }
 
             let users = ["admin": Bcrypt.hash("password", cost: 8)]
@@ -256,7 +258,7 @@ final class AuthTests: XCTestCase {
         let router = Router(context: BasicAuthRequestContext<User>.self)
         router.add(
             middleware: BasicAuthenticator { username, _ in
-                return users[username].map { User(username: username, passwordHash: $0) }
+                users[username].map { User(username: username, passwordHash: $0) }
             }
         )
         router.get { _, context -> String? in

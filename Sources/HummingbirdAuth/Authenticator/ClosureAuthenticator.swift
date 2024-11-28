@@ -28,6 +28,6 @@ public struct ClosureAuthenticator<
     }
 
     public func authenticate(request: Request, context: Context) async throws -> Context.Identity? {
-        return try await self.closure(request, context)
+        try await self.closure(request, context)
     }
 }

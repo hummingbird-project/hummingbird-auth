@@ -56,7 +56,8 @@ extension OTP {
         if let issuer {
             url += "&issuer=\(issuer)"
         }
-        url += parameters
+        url +=
+            parameters
             .map { "&\($0.key)=\($0.value)" }
             .joined()
         return url
@@ -86,7 +87,7 @@ extension OTP {
             return v
         }
         func pow(_ value: Int, _ power: Int) -> Int {
-            return repeatElement(value, count: power).reduce(1, *)
+            repeatElement(value, count: power).reduce(1, *)
         }
         return truncation % pow(10, length)
     }
@@ -217,7 +218,7 @@ extension FixedWidthInteger {
     }
 }
 
-extension Array<UInt8> {
+extension [UInt8] {
     /// Construct Array of UInt8 by copying memory
     init(_ bytes: UnsafeRawPointer, count: Int) {
         self.init(unsafeUninitializedCapacity: count) { buffer, c in

@@ -72,6 +72,6 @@ public enum Bcrypt {
     ///   - text: plain text
     ///   - hash: hashed data
     public static func verify(_ text: String, hash: String) -> Bool {
-        return c_hb_bcrypt_checkpass(text, hash) == 0
+        c_hb_bcrypt_checkpass(text, hash) == 0
     }
 }

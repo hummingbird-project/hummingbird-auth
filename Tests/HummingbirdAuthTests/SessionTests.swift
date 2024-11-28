@@ -12,12 +12,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-@testable import Hummingbird
 import HummingbirdAuth
 import HummingbirdAuthTesting
 import HummingbirdTesting
 import NIOPosix
 import XCTest
+
+@testable import Hummingbird
 
 final class SessionTests: XCTestCase {
     func testSessionAuthenticator() async throws {
@@ -87,7 +88,7 @@ final class SessionTests: XCTestCase {
         router.group()
             .addMiddleware {
                 SessionAuthenticator { session, _ -> User? in
-                    return User(name: session.userID)
+                    User(name: session.userID)
                 }
             }
             .get("session") { _, context -> HTTPResponse.Status in
@@ -279,7 +280,7 @@ final class SessionTests: XCTestCase {
         let cookie = try await sessionStorage.save(session: 1, expiresIn: .seconds(60))
         router.add(middleware: SessionMiddleware(storage: persist))
         router.post("test") { _, context in
-            return context.sessions.session?.description
+            context.sessions.session?.description
         }
         let app = Application(responder: router.buildResponder())
 
