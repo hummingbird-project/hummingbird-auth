@@ -12,7 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-@_implementationOnly import CBcrypt
+internal import CBcrypt
 
 /// Bcrypt password hashing function
 ///
