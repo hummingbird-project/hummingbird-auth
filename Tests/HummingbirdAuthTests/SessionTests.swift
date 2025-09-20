@@ -12,16 +12,17 @@
 //
 //===----------------------------------------------------------------------===//
 
+import Foundation
 import HummingbirdAuth
 import HummingbirdAuthTesting
 import HummingbirdTesting
 import NIOPosix
-import XCTest
+import Testing
 
 @testable import Hummingbird
 
-final class SessionTests: XCTestCase {
-    func testSessionAuthenticator() async throws {
+struct SessionTests {
+    @Test func testSessionAuthenticator() async throws {
         struct User: Sendable {
             let name: String
         }
@@ -59,17 +60,17 @@ final class SessionTests: XCTestCase {
 
         try await app.test(.router) { client in
             let responseCookies = try await client.execute(uri: "/session", method: .put) { response -> String? in
-                XCTAssertEqual(response.status, .ok)
+                #expect(response.status == .ok)
                 return response.headers[.setCookie]
             }
-            let cookies = try XCTUnwrap(responseCookies)
+            let cookies = try #require(responseCookies)
             try await client.execute(uri: "/session", method: .get, headers: [.cookie: cookies]) { response in
-                XCTAssertEqual(response.status, .ok)
+                #expect(response.status == .ok)
             }
         }
     }
 
-    func testSessionAuthenticatorClosure() async throws {
+    @Test func testSessionAuthenticatorClosure() async throws {
         struct User: Sendable {
             let name: String
         }
@@ -101,17 +102,17 @@ final class SessionTests: XCTestCase {
 
         try await app.test(.router) { client in
             let responseCookies = try await client.execute(uri: "/session", method: .put) { response -> String? in
-                XCTAssertEqual(response.status, .ok)
+                #expect(response.status == .ok)
                 return response.headers[.setCookie]
             }
-            let cookies = try XCTUnwrap(responseCookies)
+            let cookies = try #require(responseCookies)
             try await client.execute(uri: "/session", method: .get, headers: [.cookie: cookies]) { response in
-                XCTAssertEqual(response.status, .ok)
+                #expect(response.status == .ok)
             }
         }
     }
 
-    func testSessionUpdate() async throws {
+    @Test func testSessionUpdate() async throws {
         struct User: Codable, Sendable {
             var name: String
         }
@@ -148,39 +149,39 @@ final class SessionTests: XCTestCase {
 
         try await app.test(.router) { client in
             var cookie = try await client.execute(uri: "/save?name=john", method: .post) { response -> String in
-                XCTAssertEqual(response.status, .ok)
-                return try XCTUnwrap(response.headers[.setCookie])
+                #expect(response.status == .ok)
+                return try #require(response.headers[.setCookie])
             }
             try await client.execute(uri: "/update?name=jane", method: .post, headers: [.cookie: cookie]) { response in
-                XCTAssertEqual(response.status, .ok)
-                XCTAssertNil(response.headers[.setCookie])
+                #expect(response.status == .ok)
+                #expect(response.headers[.setCookie] == nil)
             }
             // get save username
             try await client.execute(uri: "/name", method: .get, headers: [.cookie: cookie]) { response in
-                XCTAssertEqual(response.status, .ok)
-                let buffer = try XCTUnwrap(response.body)
-                XCTAssertEqual(String(buffer: buffer), "jane")
+                #expect(response.status == .ok)
+                let buffer = response.body
+                #expect(String(buffer: buffer) == "jane")
             }
             cookie = try await client.execute(uri: "/updateExpires?name=joan", method: .post, headers: [.cookie: cookie]) { response in
-                XCTAssertEqual(response.status, .ok)
+                #expect(response.status == .ok)
                 // if we update the cookie expiration date a set-cookie header should be returned
-                let newCookieHeader = try XCTUnwrap(response.headers[.setCookie])
+                let newCookieHeader = try #require(response.headers[.setCookie])
                 // check we are updating the existing cookie
-                let cookieCookie = try XCTUnwrap(Cookie(from: cookie[...]))
-                let newCookie = try XCTUnwrap(Cookie(from: newCookieHeader[...]))
-                XCTAssertEqual(cookieCookie.value, newCookie.value)
+                let cookieCookie = try #require(Cookie(from: cookie[...]))
+                let newCookie = try #require(Cookie(from: newCookieHeader[...]))
+                #expect(cookieCookie.value == newCookie.value)
                 return newCookieHeader
             }
             // get save username
             try await client.execute(uri: "/name", method: .get, headers: [.cookie: cookie]) { response in
-                XCTAssertEqual(response.status, .ok)
-                let buffer = try XCTUnwrap(response.body)
-                XCTAssertEqual(String(buffer: buffer), "joan")
+                #expect(response.status == .ok)
+                let body = response.body
+                #expect(String(buffer: body) == "joan")
             }
         }
     }
 
-    func testSessionDeletion() async throws {
+    @Test func testSessionDeletion() async throws {
         struct User: Codable, Sendable {
             let name: String
         }
@@ -205,26 +206,26 @@ final class SessionTests: XCTestCase {
 
         try await app.test(.router) { client in
             let cookies = try await client.execute(uri: "/login?name=john", method: .post) { response -> String? in
-                XCTAssertEqual(response.status, .ok)
+                #expect(response.status == .ok)
                 return response.headers[.setCookie]
             }
             // get username
             try await client.execute(uri: "/name", method: .get, headers: cookies.map { [.cookie: $0] } ?? [:]) { response in
-                XCTAssertEqual(response.status, .ok)
-                XCTAssertEqual(String(buffer: response.body), "john")
+                #expect(response.status == .ok)
+                #expect(String(buffer: response.body) == "john")
             }
             let cookies2 = try await client.execute(uri: "/logout", method: .post) { response -> String? in
-                XCTAssertEqual(response.status, .ok)
+                #expect(response.status == .ok)
                 return response.headers[.setCookie]
             }
             // get username
             try await client.execute(uri: "/name", method: .get, headers: cookies2.map { [.cookie: $0] } ?? [:]) { response in
-                XCTAssertEqual(response.status, .unauthorized)
+                #expect(response.status == .unauthorized)
             }
         }
     }
 
-    func testSessionCookieParameters() async throws {
+    @Test func testSessionCookieParameters() async throws {
         struct User: Codable, Sendable {
             var name: String
         }
@@ -256,20 +257,20 @@ final class SessionTests: XCTestCase {
 
         try await app.test(.router) { client in
             try await client.execute(uri: "/save?name=john", method: .post) { response in
-                XCTAssertEqual(response.status, .ok)
-                let setCookieHeader = try XCTUnwrap(response.headers[.setCookie])
-                let cookie = try XCTUnwrap(Cookie(from: setCookieHeader[...]))
-                XCTAssertEqual(cookie.name, "TEST_SESSION_COOKIE")
-                XCTAssertEqual(cookie.domain, "https://test.com")
-                XCTAssertEqual(cookie.path, "/test")
-                XCTAssertEqual(cookie.secure, true)
-                XCTAssertEqual(cookie.sameSite, .strict)
+                #expect(response.status == .ok)
+                let setCookieHeader = try #require(response.headers[.setCookie])
+                let cookie = try #require(Cookie(from: setCookieHeader[...]))
+                #expect(cookie.name == "TEST_SESSION_COOKIE")
+                #expect(cookie.domain == "https://test.com")
+                #expect(cookie.path == "/test")
+                #expect(cookie.secure == true)
+                #expect(cookie.sameSite == .strict)
             }
         }
     }
 
     /// Save session as one type and retrieve as another.
-    func testInvalidSession() async throws {
+    @Test func testInvalidSession() async throws {
         struct User: Codable, Sendable {
             let name: String
         }
@@ -286,11 +287,11 @@ final class SessionTests: XCTestCase {
 
         try await app.test(.router) { client in
             try await client.execute(uri: "/test", method: .post, headers: [.cookie: cookie.description]) { response in
-                XCTAssertEqual(response.status, .noContent)
-                let setCookieHeader = try XCTUnwrap(response.headers[.setCookie])
+                #expect(response.status == .noContent)
+                let setCookieHeader = try #require(response.headers[.setCookie])
                 let cookie = Cookie(from: setCookieHeader[...])
-                let expires = try XCTUnwrap(cookie?.expires)
-                XCTAssertLessThanOrEqual(expires, .now)
+                let expires = try #require(cookie?.expires)
+                #expect(expires <= .now)
             }
         }
     }

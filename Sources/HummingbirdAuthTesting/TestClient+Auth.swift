@@ -15,7 +15,6 @@
 import ExtrasBase64
 import Hummingbird
 import HummingbirdTesting
-import XCTest
 
 /// Used to generate various authentication types for Testing framework
 public struct TestAuthentication: Equatable {
