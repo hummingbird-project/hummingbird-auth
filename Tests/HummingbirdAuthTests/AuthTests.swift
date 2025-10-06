@@ -19,10 +19,10 @@ import HummingbirdBasicAuth
 import HummingbirdBcrypt
 import HummingbirdTesting
 import NIOPosix
-import XCTest
+import Testing
 
-final class AuthTests: XCTestCase {
-    func testBearer() async throws {
+struct AuthTests {
+    @Test func testBearer() async throws {
         struct User: Sendable {
             let name: String
         }
@@ -33,16 +33,16 @@ final class AuthTests: XCTestCase {
         let app = Application(responder: router.buildResponder())
         try await app.test(.router) { client in
             try await client.execute(uri: "/", method: .get, auth: .bearer("1234567890")) { response in
-                let body = try XCTUnwrap(response.body)
-                XCTAssertEqual(String(buffer: body), "1234567890")
+                let body = response.body
+                #expect(String(buffer: body) == "1234567890")
             }
             try await client.execute(uri: "/", method: .get, auth: .basic(username: "adam", password: "1234")) { response in
-                XCTAssertEqual(response.status, .noContent)
+                #expect(response.status == .noContent)
             }
         }
     }
 
-    func testBasic() async throws {
+    @Test func testBasic() async throws {
         struct User: Sendable {
             let name: String
         }
@@ -53,13 +53,13 @@ final class AuthTests: XCTestCase {
         let app = Application(responder: router.buildResponder())
         try await app.test(.router) { client in
             try await client.execute(uri: "/", method: .get, auth: .basic(username: "adam", password: "password")) { response in
-                let body = try XCTUnwrap(response.body)
-                XCTAssertEqual(String(buffer: body), "adam:password")
+                let body = response.body
+                #expect(String(buffer: body) == "adam:password")
             }
         }
     }
 
-    func testBcryptThread() async throws {
+    @Test func testBcryptThread() async throws {
         struct User: Sendable {
             let name: String
         }
@@ -88,15 +88,15 @@ final class AuthTests: XCTestCase {
         let app = Application(responder: router.buildResponder())
         try await app.test(.router) { client in
             try await client.execute(uri: "/", method: .put, auth: .basic(username: "testuser", password: "testpassword123")) { response in
-                XCTAssertEqual(response.status, .ok)
+                #expect(response.status == .ok)
             }
             try await client.execute(uri: "/", method: .post, auth: .basic(username: "testuser", password: "testpassword123")) { response in
-                XCTAssertEqual(response.status, .ok)
+                #expect(response.status == .ok)
             }
         }
     }
 
-    func testAuth() async throws {
+    @Test func testAuth() async throws {
         struct User: Sendable {
             let name: String
         }
@@ -108,24 +108,22 @@ final class AuthTests: XCTestCase {
             var context = context
             context.identity = User(name: "Test")
 
-            XCTAssertNotNil(context.identity)
-            XCTAssertEqual(context.identity?.name, "Test")
+            #expect(context.identity != nil)
+            #expect(context.identity?.name == "Test")
 
             context.identity = nil
-            XCTAssertNil(context.identity)
-
             return .accepted
         }
         let app = Application(responder: router.buildResponder())
 
         try await app.test(.router) { client in
             try await client.execute(uri: "/", method: .get) { response in
-                XCTAssertEqual(response.status, .accepted)
+                #expect(response.status == .accepted)
             }
         }
     }
 
-    func testLogin() async throws {
+    @Test func testLogin() async throws {
         struct User: Sendable {
             let name: String
         }
@@ -144,12 +142,12 @@ final class AuthTests: XCTestCase {
 
         try await app.test(.router) { client in
             try await client.execute(uri: "/", method: .get) { response in
-                XCTAssertEqual(response.status, .ok)
+                #expect(response.status == .ok)
             }
         }
     }
 
-    func testClosureAuthenticator() async throws {
+    @Test func testClosureAuthenticator() async throws {
         struct User: Sendable {
             let name: String
         }
@@ -174,16 +172,16 @@ final class AuthTests: XCTestCase {
 
         try await app.test(.router) { client in
             try await client.execute(uri: "/authenticate?user=john", method: .get) { response in
-                XCTAssertEqual(response.status, .ok)
-                XCTAssertEqual(response.body, ByteBuffer(string: "john"))
+                #expect(response.status == .ok)
+                #expect(response.body == ByteBuffer(string: "john"))
             }
             try await client.execute(uri: "/authenticate", method: .get) { response in
-                XCTAssertEqual(response.status, .unauthorized)
+                #expect(response.status == .unauthorized)
             }
         }
     }
 
-    func testIsAuthenticatedMiddleware() async throws {
+    @Test func testIsAuthenticatedMiddleware() async throws {
         struct User: Sendable {
             let name: String
         }
@@ -208,15 +206,15 @@ final class AuthTests: XCTestCase {
 
         try await app.test(.router) { client in
             try await client.execute(uri: "/authenticated", method: .get) { response in
-                XCTAssertEqual(response.status, .ok)
+                #expect(response.status == .ok)
             }
             try await client.execute(uri: "/unauthenticated", method: .get) { response in
-                XCTAssertEqual(response.status, .unauthorized)
+                #expect(response.status == .unauthorized)
             }
         }
     }
 
-    func testBasicAuthenticator() async throws {
+    @Test func testBasicAuthenticator() async throws {
         struct User: PasswordAuthenticatable {
             let username: String
             let passwordHash: String?
@@ -240,16 +238,16 @@ final class AuthTests: XCTestCase {
         let app = Application(responder: router.buildResponder())
         try await app.test(.router) { client in
             try await client.execute(uri: "/", method: .get, auth: .basic(username: "admin", password: "password")) { response in
-                let body = try XCTUnwrap(response.body)
-                XCTAssertEqual(String(buffer: body), "admin")
+                let body = response.body
+                #expect(String(buffer: body) == "admin")
             }
             try await client.execute(uri: "/", method: .get, auth: .basic(username: "adam", password: "password")) { response in
-                XCTAssertEqual(response.status, .unauthorized)
+                #expect(response.status == .unauthorized)
             }
         }
     }
 
-    func testBasicAuthenticatorWithClosure() async throws {
+    @Test func testBasicAuthenticatorWithClosure() async throws {
         struct User: PasswordAuthenticatable {
             let username: String
             let passwordHash: String?
@@ -270,11 +268,11 @@ final class AuthTests: XCTestCase {
         let app = Application(responder: router.buildResponder())
         try await app.test(.router) { client in
             try await client.execute(uri: "/", method: .get, auth: .basic(username: "admin", password: "password")) { response in
-                let body = try XCTUnwrap(response.body)
-                XCTAssertEqual(String(buffer: body), "admin")
+                let body = response.body
+                #expect(String(buffer: body) == "admin")
             }
             try await client.execute(uri: "/", method: .get, auth: .basic(username: "adam", password: "password")) { response in
-                XCTAssertEqual(response.status, .unauthorized)
+                #expect(response.status == .unauthorized)
             }
         }
     }

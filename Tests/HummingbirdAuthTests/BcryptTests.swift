@@ -18,20 +18,20 @@ import HummingbirdAuthTesting
 import HummingbirdBcrypt
 import HummingbirdTesting
 import NIOPosix
-import XCTest
+import Testing
 
-final class BcryptTests: XCTestCase {
-    func testBcrypt() {
+struct BcryptTests {
+    @Test func testBcrypt() {
         let hash = Bcrypt.hash("password")
-        XCTAssert(Bcrypt.verify("password", hash: hash))
+        #expect(Bcrypt.verify("password", hash: hash))
     }
 
-    func testBcryptFalse() {
+    @Test func testBcryptFalse() {
         let hash = Bcrypt.hash("password")
-        XCTAssertFalse(Bcrypt.verify("password1", hash: hash))
+        #expect(!Bcrypt.verify("password1", hash: hash))
     }
 
-    func testMultipleBcrypt() async throws {
+    @Test func testMultipleBcrypt() async throws {
         struct VerifyFailError: Error {}
 
         try await withThrowingTaskGroup(of: Void.self) { group in
