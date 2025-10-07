@@ -16,7 +16,7 @@ import Hummingbird
 import HummingbirdAuth
 import Logging
 
-/// Protocol for password autheticatable object
+/// Protocol for a password authenticatable object
 public protocol PasswordAuthenticatable: Sendable {
     var passwordHash: String? { get }
 }
