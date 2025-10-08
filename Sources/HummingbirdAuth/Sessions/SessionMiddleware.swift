@@ -87,8 +87,7 @@ public struct SessionMiddleware<Context: SessionRequestContext>: RouterMiddlewar
     /// Initialize SessionMiddleware
     /// - Parameters:
     ///   - storage: Persist driver to use for storage
-    ///   - sessionCookieParameters: Session cookie parameters
-    ///   - defaultSessionExpiration: Default expiration for session data
+    ///   - configuration: SessionMiddleware configuration
     public init(
         storage: any PersistDriver,
         configuration: SessionMiddlewareConfiguration

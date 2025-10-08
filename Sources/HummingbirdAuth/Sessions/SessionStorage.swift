@@ -104,7 +104,7 @@ public struct SessionStorage<SessionType: Codable>: Sendable {
     /// Initialize session storage
     /// - Parameters:
     ///   - storage: Session cookie storage
-    ///   - sessionCookieParameters: Session cookie parameters
+    ///   - configuration: Session storage configuration
     public init(
         _ storage: any PersistDriver,
         configuration: SessionStorageConfiguration
