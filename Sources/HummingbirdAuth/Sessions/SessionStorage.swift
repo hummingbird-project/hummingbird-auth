@@ -129,9 +129,9 @@ public struct SessionStorage<SessionType: Codable>: Sendable {
     /// ``SessionStorage/update(session:expiresIn:request:)``.
     public func save(session: SessionType, expiresIn: Duration) async throws -> Cookie {
         let sessionId = Self.createSessionId()
-        // prefix with "hbs."
+        // prefix with key prefix
         try await self.storage.set(
-            key: "hbs.\(sessionId)",
+            key: "\(self.configuration.keyPrefix)\(sessionId)",
             value: session,
             expires: expiresIn
         )
@@ -145,9 +145,9 @@ public struct SessionStorage<SessionType: Codable>: Sendable {
         guard let sessionId = self.getId(request: request) else {
             throw Error.sessionDoesNotExist
         }
-        // prefix with "hbs."
+        // prefix with key prefix
         try await self.storage.set(
-            key: "hbs.\(sessionId)",
+            key: "\(self.configuration.keyPrefix)\(sessionId)",
             value: session,
             expires: expiresIn
         )
@@ -160,9 +160,9 @@ public struct SessionStorage<SessionType: Codable>: Sendable {
         guard let sessionId = self.getId(request: request) else {
             throw Error.sessionDoesNotExist
         }
-        // prefix with "hbs."
+        // prefix with key prefix
         try await self.storage.set(
-            key: "hbs.\(sessionId)",
+            key: "\(self.configuration.keyPrefix)\(sessionId)",
             value: session,
             expires: expiresIn
         )
@@ -174,9 +174,9 @@ public struct SessionStorage<SessionType: Codable>: Sendable {
     public func load(request: Request) async throws -> SessionType? {
         guard let sessionId = getId(request: request) else { return nil }
         do {
-            // prefix with "hbs."
+            // prefix with key prefix
             return try await self.storage.get(
-                key: "hbs.\(sessionId)",
+                key: "\(self.configuration.keyPrefix)\(sessionId)",
                 as: SessionType.self
             )
         } catch let error as PersistError where error == .invalidConversion {
@@ -191,9 +191,9 @@ public struct SessionStorage<SessionType: Codable>: Sendable {
         guard let sessionId = getId(request: request) else {
             throw Error.sessionDoesNotExist
         }
-        // prefix with "hbs."
+        // prefix with key prefix
         try await self.storage.remove(
-            key: "hbs.\(sessionId)"
+            key: "\(self.configuration.keyPrefix)\(sessionId)"
         )
         return self.createSessionCookie(sessionId: sessionId, expiresIn: .seconds(0))
     }
