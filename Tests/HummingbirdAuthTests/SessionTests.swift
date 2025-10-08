@@ -235,12 +235,14 @@ struct SessionTests {
         router.add(
             middleware: SessionMiddleware(
                 storage: persist,
-                sessionCookieParameters: .init(
-                    name: "TEST_SESSION_COOKIE",
-                    domain: "https://test.com",
-                    path: "/test",
-                    secure: true,
-                    sameSite: .strict
+                configuration: .init(
+                    sessionCookieParameters: .init(
+                        name: "TEST_SESSION_COOKIE",
+                        domain: "https://test.com",
+                        path: "/test",
+                        secure: true,
+                        sameSite: .strict
+                    )
                 )
             )
         )
