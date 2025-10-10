@@ -14,6 +14,36 @@
 
 import Hummingbird
 
+/// SessionStorage configuration
+public struct SessionMiddlewareConfiguration: Sendable {
+    /// Session cookie parameters
+    public var sessionCookieParameters: SessionCookieParameters
+    /// Prefix for key in key/value storage
+    public var keyPrefix: String
+    /// Default duration before session expires
+    public var defaultSessionExpiration: Duration
+
+    ///  Initialize SessionMiddlewareConfiguration
+    /// - Parameters:
+    ///   - sessionCookieParameters: Session Cookie parameters
+    ///   - keyPrefix: Prefix for key in key/value storage
+    ///   - defaultSessionExpiration: Default duration before session expires
+    public init(
+        sessionCookieParameters: SessionCookieParameters = .init(),
+        keyPrefix: String = "hbs.",
+        defaultSessionExpiration: Duration = .seconds(60 * 60 * 12)
+    ) {
+        self.sessionCookieParameters = sessionCookieParameters
+        self.keyPrefix = keyPrefix
+        self.defaultSessionExpiration = defaultSessionExpiration
+    }
+
+    /// Configuration for `SessionStorage` used by `SessionMiddleware`
+    var sessionStorageConfiguration: SessionStorageConfiguration {
+        .init(sessionCookieParameters: self.sessionCookieParameters, keyPrefix: self.keyPrefix)
+    }
+}
+
 /// Middleware that extracts session data for a request and stores it in the context
 ///
 /// The `SessionMiddleware` requires that the request context conform to ``SessionRequestContext``.
@@ -44,16 +74,29 @@ public struct SessionMiddleware<Context: SessionRequestContext>: RouterMiddlewar
     ///   - storage: Persist driver to use for storage
     ///   - sessionCookieParameters: Session cookie parameters
     ///   - defaultSessionExpiration: Default expiration for session data
+    @available(*, deprecated, renamed: "init(storage:configuration:)")
     public init(
         storage: any PersistDriver,
         sessionCookieParameters: SessionCookieParameters,
         defaultSessionExpiration: Duration = .seconds(60 * 60 * 12)
     ) {
-        self.sessionStorage = .init(storage, sessionCookieParameters: sessionCookieParameters)
+        self.sessionStorage = .init(storage, configuration: .init(sessionCookieParameters: sessionCookieParameters))
         self.defaultSessionExpiration = defaultSessionExpiration
     }
 
-    ///  Initialize Session Middleware
+    /// Initialize SessionMiddleware
+    /// - Parameters:
+    ///   - storage: Persist driver to use for storage
+    ///   - configuration: SessionMiddleware configuration
+    public init(
+        storage: any PersistDriver,
+        configuration: SessionMiddlewareConfiguration
+    ) {
+        self.sessionStorage = .init(storage, configuration: configuration.sessionStorageConfiguration)
+        self.defaultSessionExpiration = configuration.defaultSessionExpiration
+    }
+
+    ///  Initialize Session Middleware with existing session storage
     /// - Parameters:
     ///   - sessionStorage: Session storage
     ///   - defaultSessionExpiration: Default expiration for session data

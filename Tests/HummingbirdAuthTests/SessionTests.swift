@@ -235,12 +235,14 @@ struct SessionTests {
         router.add(
             middleware: SessionMiddleware(
                 storage: persist,
-                sessionCookieParameters: .init(
-                    name: "TEST_SESSION_COOKIE",
-                    domain: "https://test.com",
-                    path: "/test",
-                    secure: true,
-                    sameSite: .strict
+                configuration: .init(
+                    sessionCookieParameters: .init(
+                        name: "TEST_SESSION_COOKIE",
+                        domain: "https://test.com",
+                        path: "/test",
+                        secure: true,
+                        sameSite: .strict
+                    )
                 )
             )
         )
@@ -265,6 +267,40 @@ struct SessionTests {
                 #expect(cookie.path == "/test")
                 #expect(cookie.secure == true)
                 #expect(cookie.sameSite == .strict)
+                let value = try await persist.get(key: "hbs.\(cookie.value)", as: User.self)
+                #expect(value?.name == "john")
+            }
+        }
+    }
+
+    @Test func testSessionKeyPrefix() async throws {
+        struct User: Codable, Sendable {
+            var name: String
+        }
+        let router = Router(context: BasicSessionRequestContext<User, User>.self)
+        let persist = MemoryPersistDriver()
+        router.add(
+            middleware: SessionMiddleware(
+                storage: persist,
+                configuration: .init(keyPrefix: "hbTest/")
+            )
+        )
+        router.post("save") { request, context -> HTTPResponse.Status in
+            guard let name = request.uri.queryParameters.get("name") else {
+                throw HTTPError(.badRequest)
+            }
+            context.sessions.setSession(User(name: name), expiresIn: .seconds(600))
+            return .ok
+        }
+        let app = Application(responder: router.buildResponder())
+
+        try await app.test(.router) { client in
+            try await client.execute(uri: "/save?name=john", method: .post) { response in
+                #expect(response.status == .ok)
+                let setCookieHeader = try #require(response.headers[.setCookie])
+                let cookie = try #require(Cookie(from: setCookieHeader[...]))
+                let value = try await persist.get(key: "hbTest/\(cookie.value)", as: User.self)
+                #expect(value?.name == "john")
             }
         }
     }
