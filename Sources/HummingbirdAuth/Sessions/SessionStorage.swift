@@ -201,7 +201,7 @@ public struct SessionStorage<SessionType: Codable>: Sendable {
     /// create a session id
     static func createSessionId() -> String {
         let bytes: [UInt8] = (0..<32).map { _ in UInt8.random(in: 0...255) }
-        return String(base64Encoding: bytes)
+        return Base64.encodeToString(bytes: bytes)
     }
 
     func createSessionCookie(sessionId: String, expiresIn: Duration) -> Cookie {
