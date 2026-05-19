@@ -6,11 +6,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-#if compiler(>=6.0)
 internal import CBcrypt
-#else
-@_implementationOnly import CBcrypt
-#endif
 
 /// Bcrypt password hashing function
 ///
