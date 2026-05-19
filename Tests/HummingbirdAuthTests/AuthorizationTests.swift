@@ -8,7 +8,6 @@
 
 import Hummingbird
 import HummingbirdAuth
-import HummingbirdAuthorization
 import HummingbirdTesting
 import Testing
 
