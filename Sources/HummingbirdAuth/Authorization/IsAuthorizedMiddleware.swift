@@ -7,7 +7,6 @@
 //
 
 import Hummingbird
-import HummingbirdAuth
 
 /// Middleware that enforces an ``AuthorizationPolicy`` on every request it handles.
 ///
