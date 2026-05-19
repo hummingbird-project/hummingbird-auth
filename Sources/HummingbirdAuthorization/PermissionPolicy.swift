@@ -8,7 +8,7 @@
 
 import Hummingbird
 
-/// A type whose instances carry a set of fine-grained permissions.
+/// A type whose instances carry a collection of fine-grained permissions.
 ///
 /// Conform your identity type to `PermissionProviding` to enable ``PermissionPolicy``:
 ///
@@ -18,14 +18,13 @@ import Hummingbird
 /// }
 /// ```
 ///
-/// The `Permission` associated type can be any `Hashable & Sendable` value — commonly
-/// a scoped `String` (e.g. `"posts:write"`) or a custom enum:
+/// The `Permissions` associated type can be any `SetAlgebra` conformance — commonly
+/// `Set<Permission>`, but a compact array-backed type works equally well for identities
+/// that hold only a handful of permissions:
 ///
 /// ```swift
 /// enum Permission: String, Hashable, Sendable {
-///     case postsRead   = "posts:read"
-///     case postsWrite  = "posts:write"
-///     case usersDelete = "users:delete"
+///     case postsRead = "posts:read", postsWrite = "posts:write"
 /// }
 ///
 /// struct User: PermissionProviding {
@@ -36,12 +35,22 @@ import Hummingbird
 /// An identity type can conform to both ``RoleProviding`` and `PermissionProviding`,
 /// allowing ``RolePolicy`` and ``PermissionPolicy`` to be freely mixed via
 /// ``AllOf`` and ``AnyOf``.
+///
+/// - Note: `PermissionProviding` and ``RoleProviding`` are structurally identical
+///   protocols. They are kept separate so that a type may conform to one without
+///   the other (permissions without roles, or vice-versa), and so that the type
+///   system can enforce that ``PermissionPolicy`` only applies to permission-aware
+///   identities while ``RolePolicy`` only applies to role-aware identities.
 public protocol PermissionProviding: Sendable {
-    /// The permission type. Commonly `String` or a dedicated `enum`.
-    associatedtype Permission: Hashable & Sendable
+    /// The collection type used to store permissions.
+    ///
+    /// Must conform to `SetAlgebra` so that ``PermissionPolicy`` can call `contains`.
+    /// The element type (`Permissions.Element`) is the permission type — commonly
+    /// a scoped `String` (e.g. `"posts:write"`) or a dedicated `enum`.
+    associatedtype Permissions: SetAlgebra & Sendable where Permissions.Element: Equatable & Sendable
 
-    /// The set of permissions this identity holds.
-    var permissions: Set<Permission> { get }
+    /// The collection of permissions this identity holds.
+    var permissions: Permissions { get }
 }
 
 /// A policy that requires the identity to hold a specific permission.
@@ -65,10 +74,10 @@ public protocol PermissionProviding: Sendable {
 /// ```
 public struct PermissionPolicy<Identity: PermissionProviding>: AuthorizationPolicy {
     @usableFromInline
-    let permission: Identity.Permission
+    let permission: Identity.Permissions.Element
 
     /// Initialize with the permission to require.
-    public init(_ permission: Identity.Permission) {
+    public init(_ permission: Identity.Permissions.Element) {
         self.permission = permission
     }
 

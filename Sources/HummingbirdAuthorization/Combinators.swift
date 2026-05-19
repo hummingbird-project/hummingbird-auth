@@ -10,8 +10,8 @@ import Hummingbird
 
 /// A policy that passes only when **all** of its child policies pass.
 ///
-/// Evaluation short-circuits on the first failing policy, so policies are
-/// executed in declaration order.
+/// Evaluation short-circuits on the first failing policy so subsequent policies
+/// are not evaluated.
 ///
 /// ```swift
 /// // Require the user to be both an editor AND hold the publish permission
@@ -19,7 +19,14 @@ import Hummingbird
 ///     RolePolicy("editor"),
 ///     PermissionPolicy("posts:publish")
 /// )
+///
+/// // Store as an opaque type when a let binding is needed
+/// let policy: some AuthorizationPolicy<User> = AllOf(
+///     RolePolicy<User>("editor"),
+///     PermissionPolicy<User>("posts:publish")
+/// )
 /// ```
+///
 public struct AllOf<Identity: Sendable>: AuthorizationPolicy {
     @usableFromInline
     let policies: [any AuthorizationPolicy<Identity>]
@@ -47,8 +54,8 @@ public struct AllOf<Identity: Sendable>: AuthorizationPolicy {
 
 /// A policy that passes when **any** of its child policies pass.
 ///
-/// Evaluation short-circuits on the first passing policy, so policies are
-/// executed in declaration order.
+/// Evaluation short-circuits on the first passing policy so subsequent policies
+/// are not evaluated.
 ///
 /// ```swift
 /// // Allow admins or moderators through
@@ -57,6 +64,7 @@ public struct AllOf<Identity: Sendable>: AuthorizationPolicy {
 ///     RolePolicy("moderator")
 /// )
 /// ```
+///
 public struct AnyOf<Identity: Sendable>: AuthorizationPolicy {
     @usableFromInline
     let policies: [any AuthorizationPolicy<Identity>]
@@ -94,19 +102,19 @@ public struct AnyOf<Identity: Sendable>: AuthorizationPolicy {
 ///     Not(RolePolicy("banned"))
 /// )
 /// ```
-public struct Not<P: AuthorizationPolicy>: AuthorizationPolicy {
-    public typealias Identity = P.Identity
+public struct Not<Policy: AuthorizationPolicy>: AuthorizationPolicy {
+    public typealias Identity = Policy.Identity
 
     @usableFromInline
-    let policy: P
+    let policy: Policy
 
     /// Initialize with the policy whose result will be inverted.
-    public init(_ policy: P) {
+    public init(_ policy: Policy) {
         self.policy = policy
     }
 
     @inlinable
-    public func isAuthorized(identity: P.Identity, request: Request) async throws -> Bool {
+    public func isAuthorized(identity: Policy.Identity, request: Request) async throws -> Bool {
         try await !self.policy.isAuthorized(identity: identity, request: request)
     }
 }
