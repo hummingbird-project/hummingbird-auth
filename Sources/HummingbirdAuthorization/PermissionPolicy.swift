@@ -47,7 +47,7 @@ public protocol PermissionProviding: Sendable {
     /// Must conform to `SetAlgebra` so that ``PermissionPolicy`` can call `contains`.
     /// The element type (`Permissions.Element`) is the permission type — commonly
     /// a scoped `String` (e.g. `"posts:write"`) or a dedicated `enum`.
-    associatedtype Permissions: SetAlgebra & Sendable where Permissions.Element: Equatable & Sendable
+    associatedtype Permissions: SetAlgebra & Sendable where Permissions.Element: Sendable
 
     /// The collection of permissions this identity holds.
     var permissions: Permissions { get }
