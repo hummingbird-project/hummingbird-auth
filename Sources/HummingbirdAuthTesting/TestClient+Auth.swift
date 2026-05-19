@@ -37,7 +37,7 @@ public struct TestAuthentication: Equatable {
         case .basic(let username, let password):
             var headers = headers
             let usernamePassword = "\(username):\(password)"
-            let authorization = "Basic \(String(base64Encoding: usernamePassword.utf8))"
+            let authorization = "Basic \(Base64.encodeToString(bytes: usernamePassword.utf8))"
             headers[.authorization] = authorization
             return (uri: uri, method: method, headers: headers, body: body)
 
