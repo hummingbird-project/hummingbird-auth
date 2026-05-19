@@ -42,7 +42,7 @@ public protocol RoleProviding: Sendable {
     /// Must conform to `SetAlgebra` so that ``RolePolicy`` can call `contains`.
     /// The element type (`Roles.Element`) is the role type — commonly `String`
     /// or a dedicated `enum`.
-    associatedtype Roles: SetAlgebra & Sendable where Roles.Element: Equatable & Sendable
+    associatedtype Roles: SetAlgebra & Sendable where Roles.Element: Sendable
 
     /// The collection of roles this identity holds.
     var roles: Roles { get }
