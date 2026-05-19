@@ -8,6 +8,7 @@ let package = Package(
     platforms: [.macOS(.v14), .iOS(.v17), .tvOS(.v17)],
     products: [
         .library(name: "HummingbirdAuth", targets: ["HummingbirdAuth"]),
+        .library(name: "HummingbirdAuthorization", targets: ["HummingbirdAuthorization"]),
         .library(name: "HummingbirdBasicAuth", targets: ["HummingbirdBasicAuth"]),
         .library(name: "HummingbirdBcrypt", targets: ["HummingbirdBcrypt"]),
         .library(name: "HummingbirdOTP", targets: ["HummingbirdOTP"]),
@@ -20,6 +21,13 @@ let package = Package(
         .package(url: "https://github.com/swift-extras/swift-extras-base64.git", from: "1.0.0"),
     ],
     targets: [
+        .target(
+            name: "HummingbirdAuthorization",
+            dependencies: [
+                .byName(name: "HummingbirdAuth"),
+                .product(name: "Hummingbird", package: "hummingbird"),
+            ]
+        ),
         .target(
             name: "HummingbirdAuth",
             dependencies: [
@@ -60,6 +68,7 @@ let package = Package(
             name: "HummingbirdAuthTests",
             dependencies: [
                 .byName(name: "HummingbirdAuth"),
+                .byName(name: "HummingbirdAuthorization"),
                 .byName(name: "HummingbirdBasicAuth"),
                 .byName(name: "HummingbirdBcrypt"),
                 .byName(name: "HummingbirdOTP"),
