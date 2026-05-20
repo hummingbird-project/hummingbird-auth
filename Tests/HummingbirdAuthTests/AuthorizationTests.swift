@@ -89,6 +89,45 @@ struct AuthorizationTests {
         }
     }
 
+    @Test func testIsAuthorizedMiddlewareCustomError() async throws {
+        let router = Router(context: BasicAuthRequestContext<User>.self)
+
+        // Default: 403 Forbidden
+        router.group()
+            .add(
+                middleware: ClosureAuthenticator { _, _ in
+                    User(name: "guest", roles: ["user"])
+                }
+            )
+            .add(middleware: IsAuthorizedMiddleware(RolePolicy("admin")))
+            .get("default-error") { _, _ -> HTTPResponse.Status in .ok }
+
+        // Override: 404 Not Found — hides resource existence from unauthorised callers
+        router.group()
+            .add(
+                middleware: ClosureAuthenticator { _, _ in
+                    User(name: "guest", roles: ["user"])
+                }
+            )
+            .add(
+                middleware: IsAuthorizedMiddleware(
+                    RolePolicy("admin"),
+                    unauthorizedError: HTTPError(.notFound)
+                )
+            )
+            .get("hidden-resource") { _, _ -> HTTPResponse.Status in .ok }
+
+        let app = Application(responder: router.buildResponder())
+        try await app.test(.router) { client in
+            try await client.execute(uri: "/default-error", method: .get) { response in
+                #expect(response.status == .forbidden)
+            }
+            try await client.execute(uri: "/hidden-resource", method: .get) { response in
+                #expect(response.status == .notFound)
+            }
+        }
+    }
+
     // MARK: ClosureAuthorizationPolicy
 
     @Test func testClosureAuthorizationPolicy() async throws {
