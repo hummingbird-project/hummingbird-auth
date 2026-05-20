@@ -112,7 +112,7 @@ struct AuthorizationTests {
             .add(
                 middleware: IsAuthorizedMiddleware(
                     RolePolicy("admin"),
-                    unauthorizedError: HTTPError(.notFound)
+                    deniedError: HTTPError(.notFound)
                 )
             )
             .get("hidden-resource") { _, _ -> HTTPResponse.Status in .ok }
