@@ -17,14 +17,14 @@ import Hummingbird
 /// router.group()
 ///     .add(middleware: MyAuthenticator())
 ///     .add(middleware: IsAuthenticatedMiddleware())
-///     .add(middleware: IsAuthorizedMiddleware(RolePolicy("admin")))
+///     .add(middleware: AuthorizationPolicyMiddleware(RolePolicy("admin")))
 ///     .get("admin/dashboard") { _, _ in ... }
 /// ```
 ///
 /// Policies compose freely via ``AllOf``, ``AnyOf``, and ``Not``:
 ///
 /// ```swift
-/// IsAuthorizedMiddleware(
+/// AuthorizationPolicyMiddleware(
 ///     AnyOf(
 ///         RolePolicy("admin"),
 ///         AllOf(RolePolicy("editor"), PermissionPolicy("posts:publish"))
@@ -40,7 +40,7 @@ import Hummingbird
 /// exists to callers who are not permitted to see it:
 ///
 /// ```swift
-/// IsAuthorizedMiddleware(
+/// AuthorizationPolicyMiddleware(
 ///     RolePolicy("admin"),
 ///     deniedError: HTTPError(.notFound)
 /// )
@@ -56,12 +56,12 @@ import Hummingbird
 ///     }
 /// }
 ///
-/// IsAuthorizedMiddleware(RolePolicy("admin"), deniedError: AuthorizationError())
+/// AuthorizationPolicyMiddleware(RolePolicy("admin"), deniedError: AuthorizationError())
 /// ```
 ///
 /// - Throws `HTTPError(.unauthorized)` (401) if the request context carries no identity.
 /// - Throws `deniedError` (default: `HTTPError(.forbidden)` 403) if the policy denies.
-public struct IsAuthorizedMiddleware<
+public struct AuthorizationPolicyMiddleware<
     Policy: AuthorizationPolicy,
     Context: AuthRequestContext,
     DeniedError: HTTPResponseError

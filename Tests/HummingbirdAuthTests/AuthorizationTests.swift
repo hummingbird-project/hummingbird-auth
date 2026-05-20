@@ -33,9 +33,9 @@ private struct User: Sendable, RoleProviding, PermissionProviding {
 
 struct AuthorizationTests {
 
-    // MARK: IsAuthorizedMiddleware — HTTP status codes
+    // MARK: AuthorizationPolicyMiddleware — HTTP status codes
 
-    @Test func testIsAuthorizedMiddlewareAllows() async throws {
+    @Test func testAuthorizationPolicyMiddlewareAllows() async throws {
         let router = Router(context: BasicAuthRequestContext<User>.self)
         router.group()
             // Authenticator always succeeds — sets context.identity
@@ -44,7 +44,7 @@ struct AuthorizationTests {
                     User(name: "admin", roles: ["admin"])
                 }
             )
-            .add(middleware: IsAuthorizedMiddleware(RolePolicy("admin")))
+            .add(middleware: AuthorizationPolicyMiddleware(RolePolicy("admin")))
             .get("resource") { _, _ -> HTTPResponse.Status in .ok }
 
         let app = Application(responder: router.buildResponder())
@@ -55,7 +55,7 @@ struct AuthorizationTests {
         }
     }
 
-    @Test func testIsAuthorizedMiddlewareForbids() async throws {
+    @Test func testAuthorizationPolicyMiddlewareForbids() async throws {
         let router = Router(context: BasicAuthRequestContext<User>.self)
         router.group()
             .add(
@@ -63,7 +63,7 @@ struct AuthorizationTests {
                     User(name: "guest", roles: ["user"])  // authenticated but wrong role
                 }
             )
-            .add(middleware: IsAuthorizedMiddleware(RolePolicy("admin")))
+            .add(middleware: AuthorizationPolicyMiddleware(RolePolicy("admin")))
             .get("resource") { _, _ -> HTTPResponse.Status in .ok }
 
         let app = Application(responder: router.buildResponder())
@@ -74,11 +74,11 @@ struct AuthorizationTests {
         }
     }
 
-    @Test func testIsAuthorizedMiddlewareRequiresAuthentication() async throws {
+    @Test func testAuthorizationPolicyMiddlewareRequiresAuthentication() async throws {
         let router = Router(context: BasicAuthRequestContext<User>.self)
         router.group()
             // No authenticator — context.identity is nil
-            .add(middleware: IsAuthorizedMiddleware(RolePolicy("admin")))
+            .add(middleware: AuthorizationPolicyMiddleware(RolePolicy("admin")))
             .get("resource") { _, _ -> HTTPResponse.Status in .ok }
 
         let app = Application(responder: router.buildResponder())
@@ -89,7 +89,7 @@ struct AuthorizationTests {
         }
     }
 
-    @Test func testIsAuthorizedMiddlewareCustomError() async throws {
+    @Test func testAuthorizationPolicyMiddlewareCustomError() async throws {
         let router = Router(context: BasicAuthRequestContext<User>.self)
 
         // Default: 403 Forbidden
@@ -99,7 +99,7 @@ struct AuthorizationTests {
                     User(name: "guest", roles: ["user"])
                 }
             )
-            .add(middleware: IsAuthorizedMiddleware(RolePolicy("admin")))
+            .add(middleware: AuthorizationPolicyMiddleware(RolePolicy("admin")))
             .get("default-error") { _, _ -> HTTPResponse.Status in .ok }
 
         // Override: 404 Not Found — hides resource existence from unauthorised callers
@@ -110,7 +110,7 @@ struct AuthorizationTests {
                 }
             )
             .add(
-                middleware: IsAuthorizedMiddleware(
+                middleware: AuthorizationPolicyMiddleware(
                     RolePolicy("admin"),
                     deniedError: HTTPError(.notFound)
                 )
@@ -139,7 +139,7 @@ struct AuthorizationTests {
                 }
             )
             .add(
-                middleware: IsAuthorizedMiddleware(
+                middleware: AuthorizationPolicyMiddleware(
                     ClosureAuthorizationPolicy { user, request in
                         // Allow only requests whose "user" query param matches the identity name
                         user.name == request.uri.queryParameters.get("user")
@@ -169,11 +169,10 @@ struct AuthorizationTests {
                     User(name: "editor", roles: ["editor", "verified"])
                 }
             )
-            .add(
-                middleware: IsAuthorizedMiddleware(
-                    AllOf(RolePolicy("editor"), RolePolicy("verified"))
-                )
-            )
+            .authorized {
+                RolePolicy("editor")
+                RolePolicy("verified")
+            }
             .get("resource") { _, _ -> HTTPResponse.Status in .ok }
 
         let app = Application(responder: router.buildResponder())
@@ -192,11 +191,10 @@ struct AuthorizationTests {
                     User(name: "editor", roles: ["editor"])  // missing "verified"
                 }
             )
-            .add(
-                middleware: IsAuthorizedMiddleware(
-                    AllOf(RolePolicy("editor"), RolePolicy("verified"))
-                )
-            )
+            .authorized {
+                RolePolicy("editor")
+                RolePolicy("verified")
+            }
             .get("resource") { _, _ -> HTTPResponse.Status in .ok }
 
         let app = Application(responder: router.buildResponder())
@@ -217,11 +215,9 @@ struct AuthorizationTests {
                     User(name: "mod", roles: ["moderator"])  // no "admin" but has "moderator"
                 }
             )
-            .add(
-                middleware: IsAuthorizedMiddleware(
-                    AnyOf(RolePolicy("admin"), RolePolicy("moderator"))
-                )
-            )
+            .authorized {
+                anyOf(RolePolicy("admin"), RolePolicy("moderator"))
+            }
             .get("resource") { _, _ -> HTTPResponse.Status in .ok }
 
         let app = Application(responder: router.buildResponder())
@@ -240,11 +236,9 @@ struct AuthorizationTests {
                     User(name: "guest", roles: ["user"])  // neither admin nor moderator
                 }
             )
-            .add(
-                middleware: IsAuthorizedMiddleware(
-                    AnyOf(RolePolicy("admin"), RolePolicy("moderator"))
-                )
-            )
+            .authorized {
+                anyOf(RolePolicy("admin"), RolePolicy("moderator"))
+            }
             .get("resource") { _, _ -> HTTPResponse.Status in .ok }
 
         let app = Application(responder: router.buildResponder())
@@ -267,7 +261,7 @@ struct AuthorizationTests {
                     User(name: "alice", roles: ["user"])
                 }
             )
-            .add(middleware: IsAuthorizedMiddleware(Not(RolePolicy("banned"))))
+            .add(middleware: AuthorizationPolicyMiddleware(Not(RolePolicy("banned"))))
             .get("allowed") { _, _ -> HTTPResponse.Status in .ok }
 
         // Route 2: banned user → forbidden
@@ -277,7 +271,7 @@ struct AuthorizationTests {
                     User(name: "mallory", roles: ["banned"])
                 }
             )
-            .add(middleware: IsAuthorizedMiddleware(Not(RolePolicy("banned"))))
+            .add(middleware: AuthorizationPolicyMiddleware(Not(RolePolicy("banned"))))
             .get("denied") { _, _ -> HTTPResponse.Status in .ok }
 
         let app = Application(responder: router.buildResponder())
@@ -302,7 +296,7 @@ struct AuthorizationTests {
                     User(name: "admin", roles: ["admin"])
                 }
             )
-            .add(middleware: IsAuthorizedMiddleware(RolePolicy("admin")))
+            .add(middleware: AuthorizationPolicyMiddleware(RolePolicy("admin")))
             .get("admin") { _, _ -> HTTPResponse.Status in .ok }
 
         router.group()
@@ -311,7 +305,7 @@ struct AuthorizationTests {
                     User(name: "guest", roles: ["user"])
                 }
             )
-            .add(middleware: IsAuthorizedMiddleware(RolePolicy("admin")))
+            .add(middleware: AuthorizationPolicyMiddleware(RolePolicy("admin")))
             .get("no-access") { _, _ -> HTTPResponse.Status in .ok }
 
         let app = Application(responder: router.buildResponder())
@@ -336,7 +330,7 @@ struct AuthorizationTests {
                     User(name: "publisher", permissions: ["posts:publish"])
                 }
             )
-            .add(middleware: IsAuthorizedMiddleware(PermissionPolicy("posts:publish")))
+            .add(middleware: AuthorizationPolicyMiddleware(PermissionPolicy("posts:publish")))
             .get("publish") { _, _ -> HTTPResponse.Status in .ok }
 
         router.group()
@@ -345,7 +339,7 @@ struct AuthorizationTests {
                     User(name: "reader", permissions: ["posts:read"])
                 }
             )
-            .add(middleware: IsAuthorizedMiddleware(PermissionPolicy("posts:publish")))
+            .add(middleware: AuthorizationPolicyMiddleware(PermissionPolicy("posts:publish")))
             .get("no-publish") { _, _ -> HTTPResponse.Status in .ok }
 
         let app = Application(responder: router.buildResponder())
@@ -359,15 +353,70 @@ struct AuthorizationTests {
         }
     }
 
+    // MARK: anyOf mixing roles and permissions
+
+    @Test func testAnyOfMixedRoleAndPermission() async throws {
+        // anyOf(RolePolicy, PermissionPolicy) — A.Identity == B.Identity holds
+        // because both RolePolicy<User> and PermissionPolicy<User> share Identity = User.
+        // User conforms to both RoleProviding and PermissionProviding.
+        let router = Router(context: BasicAuthRequestContext<User>.self)
+
+        // Route: admin role OR posts:delete permission grants access
+        router.group()
+            .add(
+                middleware: ClosureAuthenticator { _, _ in
+                    User(name: "admin", roles: ["admin"], permissions: [])
+                }
+            )
+            .authorized {
+                anyOf(RolePolicy("admin"), PermissionPolicy("posts:delete"))
+            }
+            .delete("post") { _, _ -> HTTPResponse.Status in .ok }
+
+        router.group()
+            .add(
+                middleware: ClosureAuthenticator { _, _ in
+                    // moderator with delete permission but no admin role
+                    User(name: "mod", roles: ["moderator"], permissions: ["posts:delete"])
+                }
+            )
+            .authorized {
+                anyOf(RolePolicy("admin"), PermissionPolicy("posts:delete"))
+            }
+            .delete("post-mod") { _, _ -> HTTPResponse.Status in .ok }
+
+        router.group()
+            .add(
+                middleware: ClosureAuthenticator { _, _ in
+                    // reader: no admin role, no delete permission
+                    User(name: "reader", roles: ["user"], permissions: ["posts:read"])
+                }
+            )
+            .authorized {
+                anyOf(RolePolicy("admin"), PermissionPolicy("posts:delete"))
+            }
+            .delete("post-reader") { _, _ -> HTTPResponse.Status in .ok }
+
+        let app = Application(responder: router.buildResponder())
+        try await app.test(.router) { client in
+            // admin role satisfies anyOf
+            try await client.execute(uri: "/post", method: .delete) { response in
+                #expect(response.status == .ok)
+            }
+            // posts:delete permission satisfies anyOf
+            try await client.execute(uri: "/post-mod", method: .delete) { response in
+                #expect(response.status == .ok)
+            }
+            // neither role nor permission — denied
+            try await client.execute(uri: "/post-reader", method: .delete) { response in
+                #expect(response.status == .forbidden)
+            }
+        }
+    }
+
     // MARK: Role + Permission composition
 
     @Test func testRoleAndPermissionComposition() async throws {
-        // Requires "editor" role AND "posts:publish" permission
-        let policy = AllOf<User>(
-            RolePolicy("editor"),
-            PermissionPolicy("posts:publish")
-        )
-
         let router = Router(context: BasicAuthRequestContext<User>.self)
 
         // Has role + permission → allowed
@@ -377,7 +426,10 @@ struct AuthorizationTests {
                     User(name: "alice", roles: ["editor"], permissions: ["posts:publish"])
                 }
             )
-            .add(middleware: IsAuthorizedMiddleware(policy))
+            .authorized {
+                RolePolicy("editor")
+                PermissionPolicy("posts:publish")
+            }
             .get("can-publish") { _, _ -> HTTPResponse.Status in .ok }
 
         // Has role but not permission → forbidden
@@ -387,7 +439,10 @@ struct AuthorizationTests {
                     User(name: "bob", roles: ["editor"], permissions: ["posts:read"])
                 }
             )
-            .add(middleware: IsAuthorizedMiddleware(policy))
+            .authorized {
+                RolePolicy("editor")
+                PermissionPolicy("posts:publish")
+            }
             .get("no-permission") { _, _ -> HTTPResponse.Status in .ok }
 
         // Has permission but not role → forbidden
@@ -397,7 +452,10 @@ struct AuthorizationTests {
                     User(name: "charlie", roles: ["user"], permissions: ["posts:publish"])
                 }
             )
-            .add(middleware: IsAuthorizedMiddleware(policy))
+            .authorized {
+                RolePolicy("editor")
+                PermissionPolicy("posts:publish")
+            }
             .get("no-role") { _, _ -> HTTPResponse.Status in .ok }
 
         let app = Application(responder: router.buildResponder())
@@ -418,26 +476,21 @@ struct AuthorizationTests {
 
     @Test func testDeepComposition() async throws {
         // (admin OR (editor AND posts:publish)) AND NOT banned
-        let policy = AllOf<User>(
-            AnyOf<User>(
-                RolePolicy("admin"),
-                AllOf<User>(
-                    RolePolicy("editor"),
-                    PermissionPolicy("posts:publish")
-                )
-            ),
-            Not(RolePolicy("banned"))
-        )
-
         let router = Router(context: BasicAuthRequestContext<User>.self)
 
+        // nested anyOf/allOf need one <User> anchor on the first element of each inner block
+        // to give Swift's constraint solver the Identity it can't propagate backwards
+        // (admin OR (editor AND posts:publish)) AND NOT banned
+        // Two-arg anyOf/allOf avoid the circular-inference issue of nested builders
         router.group()
-            .add(
-                middleware: ClosureAuthenticator { _, _ in
-                    User(name: "admin", roles: ["admin"])
-                }
-            )
-            .add(middleware: IsAuthorizedMiddleware(policy))
+            .add(middleware: ClosureAuthenticator { _, _ in User(name: "admin", roles: ["admin"]) })
+            .authorized {
+                anyOf(
+                    RolePolicy("admin"),
+                    allOf(RolePolicy("editor"), PermissionPolicy("posts:publish"))
+                )
+                Not(RolePolicy("banned"))
+            }
             .get("admin") { _, _ -> HTTPResponse.Status in .ok }
 
         router.group()
@@ -446,17 +499,28 @@ struct AuthorizationTests {
                     User(name: "editor", roles: ["editor"], permissions: ["posts:publish"])
                 }
             )
-            .add(middleware: IsAuthorizedMiddleware(policy))
+            .authorized {
+                anyOf(
+                    RolePolicy("admin"),
+                    allOf(RolePolicy("editor"), PermissionPolicy("posts:publish"))
+                )
+                Not(RolePolicy("banned"))
+            }
             .get("editor") { _, _ -> HTTPResponse.Status in .ok }
 
         router.group()
             .add(
                 middleware: ClosureAuthenticator { _, _ in
-                    // admin but banned
                     User(name: "banned-admin", roles: ["admin", "banned"])
                 }
             )
-            .add(middleware: IsAuthorizedMiddleware(policy))
+            .authorized {
+                anyOf(
+                    RolePolicy("admin"),
+                    allOf(RolePolicy("editor"), PermissionPolicy("posts:publish"))
+                )
+                Not(RolePolicy("banned"))
+            }
             .get("banned") { _, _ -> HTTPResponse.Status in .ok }
 
         let app = Application(responder: router.buildResponder())
