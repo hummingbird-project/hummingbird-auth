@@ -100,12 +100,12 @@ public enum AnyOfBuilder<Identity: Sendable> {
 // MARK: - Optional wrapper
 
 @_documentation(visibility: internal)
-public struct _OptionalPolicy<P: AuthorizationPolicy>: AuthorizationPolicy {
-    public typealias Identity = P.Identity
-    @usableFromInline let policy: P?
-    @usableFromInline init(_ policy: P?) { self.policy = policy }
+public struct _OptionalPolicy<Policy: AuthorizationPolicy>: AuthorizationPolicy {
+    public typealias Identity = Policy.Identity
+    @usableFromInline let policy: Policy?
+    @usableFromInline init(_ policy: Policy?) { self.policy = policy }
     @inlinable
-    public func isAuthorized(identity: P.Identity, request: Request) async throws -> Bool {
+    public func isAuthorized(identity: Policy.Identity, request: Request) async throws -> Bool {
         try await policy?.isAuthorized(identity: identity, request: request) ?? true
     }
 }

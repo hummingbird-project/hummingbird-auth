@@ -285,6 +285,129 @@ struct AuthorizationTests {
         }
     }
 
+    // MARK: Builder DSL — anyOf, buildOptional, buildEither
+
+    @Test func testAnyOfBuilder() async throws {
+        // The anyOf { } builder form accumulates N policies via AnyOfBuilder.
+        // Since authorized { } only exposes AllOfBuilder, we use the two-arg anyOf(_, _)
+        // nested to reach 3 policies — this exercises the _AnyOfPair accumulation chain.
+        let router = Router(context: BasicAuthRequestContext<User>.self)
+
+        router.group()
+            .add(
+                middleware: ClosureAuthenticator { _, _ in
+                    User(name: "mod", roles: ["moderator"])
+                }
+            )
+            .authorized {
+                anyOf(RolePolicy("admin"), anyOf(RolePolicy("editor"), RolePolicy("moderator")))
+            }
+            .get("passes") { _, _ -> HTTPResponse.Status in .ok }
+
+        router.group()
+            .add(
+                middleware: ClosureAuthenticator { _, _ in
+                    User(name: "reader", roles: ["reader"])
+                }
+            )
+            .authorized {
+                anyOf(RolePolicy("admin"), anyOf(RolePolicy("editor"), RolePolicy("moderator")))
+            }
+            .get("fails") { _, _ -> HTTPResponse.Status in .ok }
+
+        let app = Application(responder: router.buildResponder())
+        try await app.test(.router) { client in
+            try await client.execute(uri: "/passes", method: .get) { response in
+                #expect(response.status == .ok)
+            }
+            try await client.execute(uri: "/fails", method: .get) { response in
+                #expect(response.status == .forbidden)
+            }
+        }
+    }
+
+    @Test func testBuildOptional() async throws {
+        // buildOptional: `if` without `else` inside authorized { }
+        // An absent branch is a no-op (passes); a present branch is evaluated normally.
+        let router = Router(context: BasicAuthRequestContext<User>.self)
+
+        // Condition false — optional policy absent → no-op, passes
+        router.group()
+            .add(
+                middleware: ClosureAuthenticator { _, _ in
+                    User(name: "editor", roles: ["editor"], permissions: [])
+                }
+            )
+            .authorized {
+                RolePolicy("editor")
+                if false { PermissionPolicy("posts:approved") }
+            }
+            .get("no-gate") { _, _ -> HTTPResponse.Status in .ok }
+
+        // Condition true — optional policy present, user lacks it → denied
+        router.group()
+            .add(
+                middleware: ClosureAuthenticator { _, _ in
+                    User(name: "editor2", roles: ["editor"], permissions: [])
+                }
+            )
+            .authorized {
+                RolePolicy("editor")
+                if true { PermissionPolicy("posts:approved") }
+            }
+            .get("gated") { _, _ -> HTTPResponse.Status in .ok }
+
+        let app = Application(responder: router.buildResponder())
+        try await app.test(.router) { client in
+            try await client.execute(uri: "/no-gate", method: .get) { response in
+                #expect(response.status == .ok)
+            }
+            try await client.execute(uri: "/gated", method: .get) { response in
+                #expect(response.status == .forbidden)
+            }
+        }
+    }
+
+    @Test func testBuildEither() async throws {
+        // buildEither: `if/else` inside authorized { } — both branches must be the same type.
+        // The active branch is chosen at compile time; the inactive one is dead code.
+        let router = Router(context: BasicAuthRequestContext<User>.self)
+
+        // true branch → RolePolicy("admin")
+        router.group()
+            .add(middleware: ClosureAuthenticator { _, _ in User(name: "admin", roles: ["admin"]) })
+            .authorized {
+                if true {
+                    RolePolicy<User>("admin")
+                } else {
+                    RolePolicy<User>("editor")
+                }
+            }
+            .get("admin-branch") { _, _ -> HTTPResponse.Status in .ok }
+
+        // false branch → RolePolicy("editor")
+        router.group()
+            .add(middleware: ClosureAuthenticator { _, _ in User(name: "editor", roles: ["editor"]) })
+            .authorized {
+                if false {
+                    RolePolicy<User>("admin")
+                } else {
+                    RolePolicy<User>("editor")
+                }
+            }
+            .get("editor-branch") { _, _ -> HTTPResponse.Status in .ok }
+
+        let app = Application(responder: router.buildResponder())
+        try await app.test(.router) { client in
+            try await client.execute(uri: "/admin-branch", method: .get) { response in
+                #expect(response.status == .ok)
+            }
+            try await client.execute(uri: "/editor-branch", method: .get) { response in
+                #expect(response.status == .ok)
+            }
+        }
+    }
+
     // MARK: RolePolicy
 
     @Test func testRolePolicy() async throws {
