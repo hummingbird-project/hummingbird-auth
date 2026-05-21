@@ -49,9 +49,7 @@ where A.Identity == B.Identity {
 /// Inverts the result of another policy.
 ///
 /// ```swift
-/// .authorized {
-///     Not(RolePolicy("banned"))
-/// }
+/// .add(middleware: AuthorizationPolicyMiddleware(Not(RolePolicy("banned"))))
 /// ```
 public struct Not<Policy: AuthorizationPolicy>: AuthorizationPolicy {
     public typealias Identity = Policy.Identity
@@ -63,44 +61,15 @@ public struct Not<Policy: AuthorizationPolicy>: AuthorizationPolicy {
     }
 }
 
-// MARK: - Result builders
+// MARK: - Optional wrappers
+//
+// Two separate types because the identity element differs per algebra:
+//   allOf  — absent branch is vacuously true  (AND with no constraint)
+//   anyOf  — absent branch is vacuously false (OR with no contribution)
 
-@resultBuilder
-public enum AllOfBuilder<Identity: Sendable> {
-    public static func buildExpression<P: AuthorizationPolicy>(_ policy: P) -> P
-    where P.Identity == Identity { policy }
-    public static func buildPartialBlock<P: AuthorizationPolicy>(first: P) -> P { first }
-    public static func buildPartialBlock<Acc: AuthorizationPolicy, Next: AuthorizationPolicy>(
-        accumulated: Acc,
-        next: Next
-    ) -> _AllOfPair<Acc, Next> where Acc.Identity == Next.Identity { _AllOfPair(accumulated, next) }
-    public static func buildOptional<P: AuthorizationPolicy>(_ policy: P?) -> _OptionalPolicy<P> {
-        _OptionalPolicy(policy)
-    }
-    public static func buildEither<P: AuthorizationPolicy>(first: P) -> P { first }
-    public static func buildEither<P: AuthorizationPolicy>(second: P) -> P { second }
-}
-
-@resultBuilder
-public enum AnyOfBuilder<Identity: Sendable> {
-    public static func buildExpression<P: AuthorizationPolicy>(_ policy: P) -> P
-    where P.Identity == Identity { policy }
-    public static func buildPartialBlock<P: AuthorizationPolicy>(first: P) -> P { first }
-    public static func buildPartialBlock<Acc: AuthorizationPolicy, Next: AuthorizationPolicy>(
-        accumulated: Acc,
-        next: Next
-    ) -> _AnyOfPair<Acc, Next> where Acc.Identity == Next.Identity { _AnyOfPair(accumulated, next) }
-    public static func buildOptional<P: AuthorizationPolicy>(_ policy: P?) -> _OptionalPolicy<P> {
-        _OptionalPolicy(policy)
-    }
-    public static func buildEither<P: AuthorizationPolicy>(first: P) -> P { first }
-    public static func buildEither<P: AuthorizationPolicy>(second: P) -> P { second }
-}
-
-// MARK: - Optional wrapper
-
+/// Produced by `AllOfBuilder.buildOptional`. An absent `if` branch passes.
 @_documentation(visibility: internal)
-public struct _OptionalPolicy<Policy: AuthorizationPolicy>: AuthorizationPolicy {
+public struct _AllOfOptionalPolicy<Policy: AuthorizationPolicy>: AuthorizationPolicy {
     public typealias Identity = Policy.Identity
     @usableFromInline let policy: Policy?
     @usableFromInline init(_ policy: Policy?) { self.policy = policy }
@@ -110,72 +79,86 @@ public struct _OptionalPolicy<Policy: AuthorizationPolicy>: AuthorizationPolicy 
     }
 }
 
-// MARK: - Two-argument combinators
-
-/// Combines two policies with AND semantics — both must pass.
-///
-/// ```swift
-/// .authorized {
-///     allOf(RolePolicy("editor"), PermissionPolicy("posts:publish"))
-/// }
-/// ```
-public func allOf<A: AuthorizationPolicy, B: AuthorizationPolicy>(
-    _ first: A,
-    _ second: B
-) -> _AllOfPair<A, B> where A.Identity == B.Identity {
-    _AllOfPair(first, second)
+/// Produced by `AnyOfBuilder.buildOptional`. An absent `if` branch fails.
+@_documentation(visibility: internal)
+public struct _AnyOfOptionalPolicy<Policy: AuthorizationPolicy>: AuthorizationPolicy {
+    public typealias Identity = Policy.Identity
+    @usableFromInline let policy: Policy?
+    @usableFromInline init(_ policy: Policy?) { self.policy = policy }
+    @inlinable
+    public func isAuthorized(identity: Policy.Identity, request: Request) async throws -> Bool {
+        try await policy?.isAuthorized(identity: identity, request: request) ?? false
+    }
 }
 
-/// Combines two policies with OR semantics — at least one must pass.
-///
-/// ```swift
-/// .authorized {
-///     anyOf(RolePolicy("admin"), PermissionPolicy("posts:delete"))
-/// }
-/// ```
-public func anyOf<A: AuthorizationPolicy, B: AuthorizationPolicy>(
-    _ first: A,
-    _ second: B
-) -> _AnyOfPair<A, B> where A.Identity == B.Identity {
-    _AnyOfPair(first, second)
+// MARK: - Result builders
+
+@resultBuilder
+public enum AllOfBuilder<Identity: Sendable> {
+    public static func buildExpression<Policy: AuthorizationPolicy>(_ policy: Policy) -> Policy
+    where Policy.Identity == Identity { policy }
+    public static func buildPartialBlock<Policy: AuthorizationPolicy>(first: Policy) -> Policy { first }
+    public static func buildPartialBlock<Accumulated: AuthorizationPolicy, Next: AuthorizationPolicy>(
+        accumulated: Accumulated,
+        next: Next
+    ) -> _AllOfPair<Accumulated, Next>
+    where Accumulated.Identity == Next.Identity { _AllOfPair(accumulated, next) }
+    public static func buildOptional<Policy: AuthorizationPolicy>(
+        _ policy: Policy?
+    ) -> _AllOfOptionalPolicy<Policy> { _AllOfOptionalPolicy(policy) }
+    public static func buildEither<Policy: AuthorizationPolicy>(first: Policy) -> Policy { first }
+    public static func buildEither<Policy: AuthorizationPolicy>(second: Policy) -> Policy { second }
 }
 
-// MARK: - Builder combinators
+@resultBuilder
+public enum AnyOfBuilder<Identity: Sendable> {
+    public static func buildExpression<Policy: AuthorizationPolicy>(_ policy: Policy) -> Policy
+    where Policy.Identity == Identity { policy }
+    public static func buildPartialBlock<Policy: AuthorizationPolicy>(first: Policy) -> Policy { first }
+    public static func buildPartialBlock<Accumulated: AuthorizationPolicy, Next: AuthorizationPolicy>(
+        accumulated: Accumulated,
+        next: Next
+    ) -> _AnyOfPair<Accumulated, Next>
+    where Accumulated.Identity == Next.Identity { _AnyOfPair(accumulated, next) }
+    public static func buildOptional<Policy: AuthorizationPolicy>(
+        _ policy: Policy?
+    ) -> _AnyOfOptionalPolicy<Policy> { _AnyOfOptionalPolicy(policy) }
+    public static func buildEither<Policy: AuthorizationPolicy>(first: Policy) -> Policy { first }
+    public static func buildEither<Policy: AuthorizationPolicy>(second: Policy) -> Policy { second }
+}
 
-/// Combines any number of policies with AND semantics — all must pass.
+// MARK: - Builder functions
+
+/// Combines policies with AND semantics — all must pass.
 ///
 /// Evaluation short-circuits on the first failing policy.
 ///
 /// ```swift
-/// .authorized {
-///     allOf {
-///         RolePolicy("editor")
-///         PermissionPolicy("posts:publish")
-///         if requiresApproval { PermissionPolicy("posts:approved") }
-///     }
-/// }
+/// .add(middleware: AuthorizationPolicyMiddleware(allOf {
+///     RolePolicy("editor")
+///     PermissionPolicy("posts:publish")
+///     if requiresApproval { PermissionPolicy("posts:approved") }
+/// }))
 /// ```
-public func allOf<Policy: AuthorizationPolicy>(
-    @AllOfBuilder<Policy.Identity> _ build: () -> Policy
-) -> Policy {
+public func allOf<Identity: Sendable>(
+    @AllOfBuilder<Identity> _ build: () -> some AuthorizationPolicy<Identity>
+) -> some AuthorizationPolicy<Identity> {
     build()
 }
 
-/// Combines any number of policies with OR semantics — at least one must pass.
+/// Combines policies with OR semantics — at least one must pass.
 ///
 /// Evaluation short-circuits on the first passing policy.
 ///
 /// ```swift
-/// .authorized {
-///     anyOf {
-///         RolePolicy("admin")
-///         RolePolicy("moderator")
-///         if legacyModeEnabled { RolePolicy("legacy-admin") }
-///     }
-/// }
+/// .add(middleware: AuthorizationPolicyMiddleware(anyOf {
+///     RolePolicy("admin")
+///     RolePolicy("moderator")
+///     if legacyModeEnabled { RolePolicy("legacy-admin") }
+/// }))
 /// ```
-public func anyOf<Policy: AuthorizationPolicy>(
-    @AnyOfBuilder<Policy.Identity> _ build: () -> Policy
-) -> Policy {
+public func anyOf<Identity: Sendable>(
+    @AnyOfBuilder<Identity> _ build: () -> some AuthorizationPolicy<Identity>
+) -> some AuthorizationPolicy<Identity> {
     build()
 }

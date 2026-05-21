@@ -169,10 +169,14 @@ struct AuthorizationTests {
                     User(name: "editor", roles: ["editor", "verified"])
                 }
             )
-            .authorized {
-                RolePolicy("editor")
-                RolePolicy("verified")
-            }
+            .add(
+                middleware: AuthorizationPolicyMiddleware(
+                    allOf {
+                        RolePolicy("editor")
+                        RolePolicy("verified")
+                    }
+                )
+            )
             .get("resource") { _, _ -> HTTPResponse.Status in .ok }
 
         let app = Application(responder: router.buildResponder())
@@ -191,10 +195,14 @@ struct AuthorizationTests {
                     User(name: "editor", roles: ["editor"])  // missing "verified"
                 }
             )
-            .authorized {
-                RolePolicy("editor")
-                RolePolicy("verified")
-            }
+            .add(
+                middleware: AuthorizationPolicyMiddleware(
+                    allOf {
+                        RolePolicy("editor")
+                        RolePolicy("verified")
+                    }
+                )
+            )
             .get("resource") { _, _ -> HTTPResponse.Status in .ok }
 
         let app = Application(responder: router.buildResponder())
@@ -215,9 +223,14 @@ struct AuthorizationTests {
                     User(name: "mod", roles: ["moderator"])  // no "admin" but has "moderator"
                 }
             )
-            .authorized {
-                anyOf(RolePolicy("admin"), RolePolicy("moderator"))
-            }
+            .add(
+                middleware: AuthorizationPolicyMiddleware(
+                    anyOf {
+                        RolePolicy("admin")
+                        RolePolicy("moderator")
+                    }
+                )
+            )
             .get("resource") { _, _ -> HTTPResponse.Status in .ok }
 
         let app = Application(responder: router.buildResponder())
@@ -236,9 +249,14 @@ struct AuthorizationTests {
                     User(name: "guest", roles: ["user"])  // neither admin nor moderator
                 }
             )
-            .authorized {
-                anyOf(RolePolicy("admin"), RolePolicy("moderator"))
-            }
+            .add(
+                middleware: AuthorizationPolicyMiddleware(
+                    anyOf {
+                        RolePolicy("admin")
+                        RolePolicy("moderator")
+                    }
+                )
+            )
             .get("resource") { _, _ -> HTTPResponse.Status in .ok }
 
         let app = Application(responder: router.buildResponder())
@@ -288,9 +306,7 @@ struct AuthorizationTests {
     // MARK: Builder DSL — anyOf, buildOptional, buildEither
 
     @Test func testAnyOfBuilder() async throws {
-        // The anyOf { } builder form accumulates N policies via AnyOfBuilder.
-        // Since authorized { } only exposes AllOfBuilder, we use the two-arg anyOf(_, _)
-        // nested to reach 3 policies — this exercises the _AnyOfPair accumulation chain.
+        // anyOf { } builder form — 3 policies, OR semantics
         let router = Router(context: BasicAuthRequestContext<User>.self)
 
         router.group()
@@ -299,9 +315,15 @@ struct AuthorizationTests {
                     User(name: "mod", roles: ["moderator"])
                 }
             )
-            .authorized {
-                anyOf(RolePolicy("admin"), anyOf(RolePolicy("editor"), RolePolicy("moderator")))
-            }
+            .add(
+                middleware: AuthorizationPolicyMiddleware(
+                    anyOf {
+                        RolePolicy("admin")
+                        RolePolicy("editor")
+                        RolePolicy("moderator")
+                    }
+                )
+            )
             .get("passes") { _, _ -> HTTPResponse.Status in .ok }
 
         router.group()
@@ -310,9 +332,15 @@ struct AuthorizationTests {
                     User(name: "reader", roles: ["reader"])
                 }
             )
-            .authorized {
-                anyOf(RolePolicy("admin"), anyOf(RolePolicy("editor"), RolePolicy("moderator")))
-            }
+            .add(
+                middleware: AuthorizationPolicyMiddleware(
+                    anyOf {
+                        RolePolicy("admin")
+                        RolePolicy("editor")
+                        RolePolicy("moderator")
+                    }
+                )
+            )
             .get("fails") { _, _ -> HTTPResponse.Status in .ok }
 
         let app = Application(responder: router.buildResponder())
@@ -338,10 +366,14 @@ struct AuthorizationTests {
                     User(name: "editor", roles: ["editor"], permissions: [])
                 }
             )
-            .authorized {
-                RolePolicy("editor")
-                if false { PermissionPolicy("posts:approved") }
-            }
+            .add(
+                middleware: AuthorizationPolicyMiddleware(
+                    allOf {
+                        RolePolicy("editor")
+                        if false { PermissionPolicy("posts:approved") }
+                    }
+                )
+            )
             .get("no-gate") { _, _ -> HTTPResponse.Status in .ok }
 
         // Condition true — optional policy present, user lacks it → denied
@@ -351,10 +383,14 @@ struct AuthorizationTests {
                     User(name: "editor2", roles: ["editor"], permissions: [])
                 }
             )
-            .authorized {
-                RolePolicy("editor")
-                if true { PermissionPolicy("posts:approved") }
-            }
+            .add(
+                middleware: AuthorizationPolicyMiddleware(
+                    allOf {
+                        RolePolicy("editor")
+                        if true { PermissionPolicy("posts:approved") }
+                    }
+                )
+            )
             .get("gated") { _, _ -> HTTPResponse.Status in .ok }
 
         let app = Application(responder: router.buildResponder())
@@ -376,25 +412,25 @@ struct AuthorizationTests {
         // true branch → RolePolicy("admin")
         router.group()
             .add(middleware: ClosureAuthenticator { _, _ in User(name: "admin", roles: ["admin"]) })
-            .authorized {
-                if true {
-                    RolePolicy<User>("admin")
-                } else {
-                    RolePolicy<User>("editor")
-                }
-            }
+            .add(
+                middleware: AuthorizationPolicyMiddleware(
+                    allOf {
+                        if true { RolePolicy("admin") } else { RolePolicy("editor") }
+                    }
+                )
+            )
             .get("admin-branch") { _, _ -> HTTPResponse.Status in .ok }
 
         // false branch → RolePolicy("editor")
         router.group()
             .add(middleware: ClosureAuthenticator { _, _ in User(name: "editor", roles: ["editor"]) })
-            .authorized {
-                if false {
-                    RolePolicy<User>("admin")
-                } else {
-                    RolePolicy<User>("editor")
-                }
-            }
+            .add(
+                middleware: AuthorizationPolicyMiddleware(
+                    allOf {
+                        if false { RolePolicy("admin") } else { RolePolicy("editor") }
+                    }
+                )
+            )
             .get("editor-branch") { _, _ -> HTTPResponse.Status in .ok }
 
         let app = Application(responder: router.buildResponder())
@@ -491,33 +527,46 @@ struct AuthorizationTests {
                     User(name: "admin", roles: ["admin"], permissions: [])
                 }
             )
-            .authorized {
-                anyOf(RolePolicy("admin"), PermissionPolicy("posts:delete"))
-            }
+            .add(
+                middleware: AuthorizationPolicyMiddleware(
+                    anyOf {
+                        RolePolicy("admin")
+                        PermissionPolicy("posts:delete")
+                    }
+                )
+            )
             .delete("post") { _, _ -> HTTPResponse.Status in .ok }
 
         router.group()
             .add(
                 middleware: ClosureAuthenticator { _, _ in
-                    // moderator with delete permission but no admin role
                     User(name: "mod", roles: ["moderator"], permissions: ["posts:delete"])
                 }
             )
-            .authorized {
-                anyOf(RolePolicy("admin"), PermissionPolicy("posts:delete"))
-            }
+            .add(
+                middleware: AuthorizationPolicyMiddleware(
+                    anyOf {
+                        RolePolicy("admin")
+                        PermissionPolicy("posts:delete")
+                    }
+                )
+            )
             .delete("post-mod") { _, _ -> HTTPResponse.Status in .ok }
 
         router.group()
             .add(
                 middleware: ClosureAuthenticator { _, _ in
-                    // reader: no admin role, no delete permission
                     User(name: "reader", roles: ["user"], permissions: ["posts:read"])
                 }
             )
-            .authorized {
-                anyOf(RolePolicy("admin"), PermissionPolicy("posts:delete"))
-            }
+            .add(
+                middleware: AuthorizationPolicyMiddleware(
+                    anyOf {
+                        RolePolicy("admin")
+                        PermissionPolicy("posts:delete")
+                    }
+                )
+            )
             .delete("post-reader") { _, _ -> HTTPResponse.Status in .ok }
 
         let app = Application(responder: router.buildResponder())
@@ -549,10 +598,14 @@ struct AuthorizationTests {
                     User(name: "alice", roles: ["editor"], permissions: ["posts:publish"])
                 }
             )
-            .authorized {
-                RolePolicy("editor")
-                PermissionPolicy("posts:publish")
-            }
+            .add(
+                middleware: AuthorizationPolicyMiddleware(
+                    allOf {
+                        RolePolicy("editor")
+                        PermissionPolicy("posts:publish")
+                    }
+                )
+            )
             .get("can-publish") { _, _ -> HTTPResponse.Status in .ok }
 
         // Has role but not permission → forbidden
@@ -562,10 +615,14 @@ struct AuthorizationTests {
                     User(name: "bob", roles: ["editor"], permissions: ["posts:read"])
                 }
             )
-            .authorized {
-                RolePolicy("editor")
-                PermissionPolicy("posts:publish")
-            }
+            .add(
+                middleware: AuthorizationPolicyMiddleware(
+                    allOf {
+                        RolePolicy("editor")
+                        PermissionPolicy("posts:publish")
+                    }
+                )
+            )
             .get("no-permission") { _, _ -> HTTPResponse.Status in .ok }
 
         // Has permission but not role → forbidden
@@ -575,10 +632,14 @@ struct AuthorizationTests {
                     User(name: "charlie", roles: ["user"], permissions: ["posts:publish"])
                 }
             )
-            .authorized {
-                RolePolicy("editor")
-                PermissionPolicy("posts:publish")
-            }
+            .add(
+                middleware: AuthorizationPolicyMiddleware(
+                    allOf {
+                        RolePolicy("editor")
+                        PermissionPolicy("posts:publish")
+                    }
+                )
+            )
             .get("no-role") { _, _ -> HTTPResponse.Status in .ok }
 
         let app = Application(responder: router.buildResponder())
@@ -601,19 +662,22 @@ struct AuthorizationTests {
         // (admin OR (editor AND posts:publish)) AND NOT banned
         let router = Router(context: BasicAuthRequestContext<User>.self)
 
-        // nested anyOf/allOf need one <User> anchor on the first element of each inner block
-        // to give Swift's constraint solver the Identity it can't propagate backwards
-        // (admin OR (editor AND posts:publish)) AND NOT banned
-        // Two-arg anyOf/allOf avoid the circular-inference issue of nested builders
         router.group()
             .add(middleware: ClosureAuthenticator { _, _ in User(name: "admin", roles: ["admin"]) })
-            .authorized {
-                anyOf(
-                    RolePolicy("admin"),
-                    allOf(RolePolicy("editor"), PermissionPolicy("posts:publish"))
+            .add(
+                middleware: AuthorizationPolicyMiddleware(
+                    allOf {
+                        anyOf {
+                            RolePolicy("admin")
+                            allOf {
+                                RolePolicy("editor")
+                                PermissionPolicy("posts:publish")
+                            }
+                        }
+                        Not(RolePolicy("banned"))
+                    }
                 )
-                Not(RolePolicy("banned"))
-            }
+            )
             .get("admin") { _, _ -> HTTPResponse.Status in .ok }
 
         router.group()
@@ -622,13 +686,20 @@ struct AuthorizationTests {
                     User(name: "editor", roles: ["editor"], permissions: ["posts:publish"])
                 }
             )
-            .authorized {
-                anyOf(
-                    RolePolicy("admin"),
-                    allOf(RolePolicy("editor"), PermissionPolicy("posts:publish"))
+            .add(
+                middleware: AuthorizationPolicyMiddleware(
+                    allOf {
+                        anyOf {
+                            RolePolicy("admin")
+                            allOf {
+                                RolePolicy("editor")
+                                PermissionPolicy("posts:publish")
+                            }
+                        }
+                        Not(RolePolicy("banned"))
+                    }
                 )
-                Not(RolePolicy("banned"))
-            }
+            )
             .get("editor") { _, _ -> HTTPResponse.Status in .ok }
 
         router.group()
@@ -637,13 +708,20 @@ struct AuthorizationTests {
                     User(name: "banned-admin", roles: ["admin", "banned"])
                 }
             )
-            .authorized {
-                anyOf(
-                    RolePolicy("admin"),
-                    allOf(RolePolicy("editor"), PermissionPolicy("posts:publish"))
+            .add(
+                middleware: AuthorizationPolicyMiddleware(
+                    allOf {
+                        anyOf {
+                            RolePolicy("admin")
+                            allOf {
+                                RolePolicy("editor")
+                                PermissionPolicy("posts:publish")
+                            }
+                        }
+                        Not(RolePolicy("banned"))
+                    }
                 )
-                Not(RolePolicy("banned"))
-            }
+            )
             .get("banned") { _, _ -> HTTPResponse.Status in .ok }
 
         let app = Application(responder: router.buildResponder())

@@ -14,8 +14,10 @@ import Testing
 
 // MARK: - Shared test identity
 
-private struct User: Sendable {
+private struct User: Sendable, RoleProviding, PermissionProviding {
     let name: String
+    var roles: Set<String> = []
+    var permissions: Set<String> = []
 }
 
 // MARK: - Shared scope helper
@@ -37,6 +39,65 @@ private struct AllowListScope: AuthorizationScope {
 // MARK: - Tests
 
 struct ScopeTests {
+
+    // MARK: Optional policy semantics
+
+    @Test func testAllOfBuildOptionalAbsentBranchPasses() async throws {
+        // In allOf: an absent `if` branch is vacuously true (no constraint added)
+        let router = Router(context: BasicAuthRequestContext<User>.self)
+        router.group()
+            .add(middleware: ClosureAuthenticator { _, _ in User(name: "editor", roles: ["editor"]) })
+            .add(
+                middleware: AuthorizationPolicyMiddleware(
+                    allOf {
+                        RolePolicy("editor")
+                        if false { PermissionPolicy("extra") }  // absent — passes
+                    }
+                )
+            )
+            .get("resource") { _, _ -> HTTPResponse.Status in .ok }
+        let app = Application(responder: router.buildResponder())
+        try await app.test(.router) { client in
+            try await client.execute(uri: "/resource", method: .get) { response in
+                #expect(response.status == .ok)  // absent allOf branch is a no-op
+            }
+        }
+    }
+
+    @Test func testAnyOfBuildOptionalAbsentBranchFails() async throws {
+        // In anyOf: an absent `if` branch contributes nothing — does NOT force a pass
+        let router = Router(context: BasicAuthRequestContext<User>.self)
+        router.group()
+            .add(middleware: ClosureAuthenticator { _, _ in User(name: "editor", roles: ["editor"]) })
+            .add(
+                middleware: AuthorizationPolicyMiddleware(
+                    anyOf {
+                        if false { RolePolicy("admin") }  // absent — fails, not passes
+                        RolePolicy("editor")  // this one actually passes
+                    }
+                )
+            )
+            .get("passes") { _, _ -> HTTPResponse.Status in .ok }
+        router.group()
+            .add(middleware: ClosureAuthenticator { _, _ in User(name: "editor", roles: ["editor"]) })
+            .add(
+                middleware: AuthorizationPolicyMiddleware(
+                    anyOf {
+                        if false { RolePolicy("admin") }  // absent — must NOT force true
+                    }
+                )
+            )
+            .get("fails") { _, _ -> HTTPResponse.Status in .ok }
+        let app = Application(responder: router.buildResponder())
+        try await app.test(.router) { client in
+            try await client.execute(uri: "/passes", method: .get) { response in
+                #expect(response.status == .ok)  // editor branch passed
+            }
+            try await client.execute(uri: "/fails", method: .get) { response in
+                #expect(response.status == .forbidden)  // no branch passed
+            }
+        }
+    }
 
     // MARK: QueryFilter
 
