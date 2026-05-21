@@ -61,7 +61,7 @@ struct ScopeTests {
     @Test func testScopeFiltersCollectionPerIdentity() async throws {
         let scope = AllowListScope(allowed: [
             "editor": ["doc-1", "doc-2"],
-            "admin":  ["doc-1", "doc-2", "doc-3"],
+            "admin": ["doc-1", "doc-2", "doc-3"],
         ])
         let allItems = ["doc-1", "doc-2", "doc-3", "doc-other"]
 
