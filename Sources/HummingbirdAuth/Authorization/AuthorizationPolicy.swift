@@ -18,9 +18,7 @@ import Hummingbird
 /// ```swift
 /// router.group()
 ///     .add(middleware: MyAuthenticator())
-///     .authorized {
-///         RolePolicy("admin")
-///     }
+///     .add(middleware: AuthorizationPolicyMiddleware(RolePolicy("admin")))
 ///     .get("dashboard") { _, _ in ... }
 /// ```
 public protocol AuthorizationPolicy<Identity>: Sendable {
@@ -35,11 +33,11 @@ public protocol AuthorizationPolicy<Identity>: Sendable {
 /// An ``AuthorizationPolicy`` backed by a closure.
 ///
 /// ```swift
-/// .authorized {
+/// .add(middleware: AuthorizationPolicyMiddleware(
 ///     ClosureAuthorizationPolicy { user, request in
 ///         user.id == request.uri.queryParameters.get("userId")
 ///     }
-/// }
+/// ))
 /// ```
 public struct ClosureAuthorizationPolicy<Identity: Sendable>: AuthorizationPolicy {
     @usableFromInline

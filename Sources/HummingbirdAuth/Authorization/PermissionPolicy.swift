@@ -36,13 +36,13 @@ public protocol PermissionProviding: Sendable {
 /// Requires the identity to hold a specific permission.
 ///
 /// ```swift
-/// .authorized { PermissionPolicy("posts:publish") }
+/// .add(middleware: AuthorizationPolicyMiddleware(PermissionPolicy("posts:publish")))
 ///
 /// // Role OR permission
-/// .authorized { anyOf(RolePolicy("admin"), PermissionPolicy("posts:delete")) }
+/// .add(middleware: AuthorizationPolicyMiddleware(anyOf { RolePolicy("admin"); PermissionPolicy("posts:delete") }))
 ///
 /// // Role AND permission
-/// .authorized { allOf(RolePolicy("editor"), PermissionPolicy("posts:publish")) }
+/// .add(middleware: AuthorizationPolicyMiddleware(allOf { RolePolicy("editor"); PermissionPolicy("posts:publish") }))
 /// ```
 public struct PermissionPolicy<Identity: PermissionProviding>: AuthorizationPolicy {
     @usableFromInline

@@ -34,13 +34,13 @@ public protocol RoleProviding: Sendable {
 /// Requires the identity to hold a specific role.
 ///
 /// ```swift
-/// .authorized { RolePolicy("admin") }
+/// .add(middleware: AuthorizationPolicyMiddleware(RolePolicy("admin")))
 ///
 /// // OR
-/// .authorized { anyOf(RolePolicy("admin"), RolePolicy("moderator")) }
+/// .add(middleware: AuthorizationPolicyMiddleware(anyOf { RolePolicy("admin"); RolePolicy("moderator") }))
 ///
 /// // AND NOT
-/// .authorized { allOf(RolePolicy("editor"), Not(RolePolicy("banned"))) }
+/// .add(middleware: AuthorizationPolicyMiddleware(allOf { RolePolicy("editor"); Not(RolePolicy("banned")) }))
 /// ```
 public struct RolePolicy<Identity: RoleProviding>: AuthorizationPolicy {
     @usableFromInline
