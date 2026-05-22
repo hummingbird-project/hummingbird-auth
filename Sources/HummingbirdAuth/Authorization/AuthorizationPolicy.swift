@@ -13,8 +13,6 @@ import Hummingbird
 /// Implement this protocol to create reusable, composable authorization rules.
 /// For one-off rules use ``ClosureAuthorizationPolicy``.
 ///
-/// Attach policies to a route group via ``RouterGroup/authorized(_:)``:
-///
 /// ```swift
 /// router.group()
 ///     .add(middleware: MyAuthenticator())

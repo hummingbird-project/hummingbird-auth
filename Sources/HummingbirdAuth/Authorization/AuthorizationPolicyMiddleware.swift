@@ -21,21 +21,19 @@ import Hummingbird
 ///     .get("admin/dashboard") { _, _ in ... }
 /// ```
 ///
-/// Policies compose freely via ``AllOf``, ``AnyOf``, and ``Not``:
+/// Policies compose freely via `allOf { }`, `anyOf { }`, and ``Not``:
 ///
 /// ```swift
-/// AuthorizationPolicyMiddleware(
-///     AnyOf(
-///         RolePolicy("admin"),
-///         AllOf(RolePolicy("editor"), PermissionPolicy("posts:publish"))
-///     )
-/// )
+/// AuthorizationPolicyMiddleware(anyOf {
+///     RolePolicy("admin")
+///     allOf { RolePolicy("editor"); PermissionPolicy("posts:publish") }
+/// })
 /// ```
 ///
 /// ### Customising the denial error
 ///
 /// By default a denied request throws `403 Forbidden`. Supply any
-/// ``HTTPResponseError``-conforming value as `deniedError` to override this —
+/// `HTTPResponseError`-conforming value as `deniedError` to override this —
 /// a common need is returning `404 Not Found` to avoid leaking whether a resource
 /// exists to callers who are not permitted to see it:
 ///
@@ -75,7 +73,7 @@ public struct AuthorizationPolicyMiddleware<
     /// Initialize with an authorization policy.
     /// - Parameters:
     ///   - policy: The policy evaluated for every request in this middleware group.
-    ///   - deniedError: The ``HTTPResponseError`` thrown when the policy denies the request.
+    ///   - deniedError: The `HTTPResponseError` thrown when the policy denies the request.
     ///     Defaults to `HTTPError(.forbidden)` (403).
     ///   - context: The request context type (used for type inference only).
     public init(
