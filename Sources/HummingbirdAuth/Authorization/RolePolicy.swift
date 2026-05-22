@@ -20,9 +20,25 @@ import Hummingbird
 /// struct User: RoleProviding { var roles: Set<Role> }
 /// ```
 ///
-/// The `Roles` associated type can be any `SetAlgebra` conformance — `Set<Role>` is the
-/// most common choice, but a compact array-backed type is equally valid for identities
-/// that hold only a handful of roles.
+/// The `Roles` associated type can be any `SetAlgebra` conformance.
+/// `Set<Role>` is the most common choice, but `OptionSet` works equally well and is
+/// more efficient when roles map naturally to a bitmask:
+///
+/// ```swift
+/// struct Roles: OptionSet, Sendable {
+///     let rawValue: UInt8
+///     static let admin     = Roles(rawValue: 1 << 0)
+///     static let editor    = Roles(rawValue: 1 << 1)
+///     static let moderator = Roles(rawValue: 1 << 2)
+/// }
+///
+/// struct User: RoleProviding {
+///     var roles: Roles   // single byte; bitwise contains check
+/// }
+/// ```
+///
+/// With an `OptionSet`, `RolePolicy(.admin)` checks whether the admin bit is set
+/// in a single bitwise operation.
 public protocol RoleProviding: Sendable {
     /// A `SetAlgebra` collection whose `Element` is the role type.
     associatedtype Roles: SetAlgebra & Sendable where Roles.Element: Sendable

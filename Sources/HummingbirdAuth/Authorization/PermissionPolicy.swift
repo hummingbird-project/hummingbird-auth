@@ -23,6 +23,24 @@ import Hummingbird
 /// struct User: PermissionProviding { var permissions: Set<Permission> }
 /// ```
 ///
+/// The `Permissions` associated type can be any `SetAlgebra` conformance.
+/// `OptionSet` is a good fit for permission sets that are fixed at compile time —
+/// a single integer stores all flags and `contains` is a single bitwise operation:
+///
+/// ```swift
+/// struct Permissions: OptionSet, Sendable {
+///     let rawValue: UInt32
+///     static let postsRead    = Permissions(rawValue: 1 << 0)
+///     static let postsWrite   = Permissions(rawValue: 1 << 1)
+///     static let postsDelete  = Permissions(rawValue: 1 << 2)
+///     static let usersManage  = Permissions(rawValue: 1 << 3)
+/// }
+///
+/// struct User: PermissionProviding {
+///     var permissions: Permissions
+/// }
+/// ```
+///
 /// A type can conform to both ``RoleProviding`` and `PermissionProviding`,
 /// enabling ``RolePolicy`` and ``PermissionPolicy`` to be mixed freely.
 public protocol PermissionProviding: Sendable {
