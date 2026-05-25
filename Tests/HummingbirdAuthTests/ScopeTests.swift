@@ -131,21 +131,22 @@ struct ScopeTests {
         router.group()
             .add(middleware: ClosureAuthenticator { _, _ in User(name: "editor") })
             .get("editor/items") { request, context -> [String] in
-                guard let identity = context.identity else { throw HTTPError(.unauthorized) }
-                let filter = try await scope.filter(for: identity, request: request)
-                var result: [String] = []
-                for item in allItems { if try await filter.matches(item) { result.append(item) } }
-                return result.sorted()
+                let identity = try context.requireIdentity()
+                // Sequence.filter(scope:identity:request:) — the primary integration point
+                return
+                    try await allItems
+                    .filter(scope: scope, identity: identity, request: request)
+                    .sorted()
             }
 
         router.group()
             .add(middleware: ClosureAuthenticator { _, _ in User(name: "admin") })
             .get("admin/items") { request, context -> [String] in
-                guard let identity = context.identity else { throw HTTPError(.unauthorized) }
-                let filter = try await scope.filter(for: identity, request: request)
-                var result: [String] = []
-                for item in allItems { if try await filter.matches(item) { result.append(item) } }
-                return result.sorted()
+                let identity = try context.requireIdentity()
+                return
+                    try await allItems
+                    .filter(scope: scope, identity: identity, request: request)
+                    .sorted()
             }
 
         let app = Application(responder: router.buildResponder())
@@ -171,11 +172,10 @@ struct ScopeTests {
         router.group()
             .add(middleware: ClosureAuthenticator { _, _ in User(name: "stranger") })
             .get("items") { request, context -> [String] in
-                guard let identity = context.identity else { throw HTTPError(.unauthorized) }
-                let filter = try await scope.filter(for: identity, request: request)
-                var result: [String] = []
-                for item in allItems { if try await filter.matches(item) { result.append(item) } }
-                return result
+                let identity = try context.requireIdentity()
+                return
+                    try await allItems
+                    .filter(scope: scope, identity: identity, request: request)
             }
 
         let app = Application(responder: router.buildResponder())

@@ -8,11 +8,17 @@
 
 import Hummingbird
 
-/// A resolved filter returned by ``AuthorizationScope/filter(for:request:)``.
+/// The evaluation half of the two-phase collection authorization pattern.
 ///
-/// The concrete type carries whatever data was resolved during the async
-/// computation — a set of allowed IDs, a predicate, a list of constraints —
-/// and applies it synchronously per resource via ``matches(_:)``.
+/// ``AuthorizationScope/filter(for:request:)`` is the *resolution* phase — it runs
+/// once per request and does the async work (store queries, policy engine calls).
+/// `QueryFilter` is the *evaluation* phase — ``matches(_:)`` is called once per
+/// resource using data already in memory, with no further I/O.
+///
+/// ```
+/// AuthorizationScope.filter(for:request:)  →  async, once    (resolve allowed IDs)
+/// QueryFilter.matches(_:)                  →  sync,  N times  (check each resource)
+/// ```
 public protocol QueryFilter<Resource>: Sendable {
     /// The resource type this filter operates on.
     associatedtype Resource: Sendable
