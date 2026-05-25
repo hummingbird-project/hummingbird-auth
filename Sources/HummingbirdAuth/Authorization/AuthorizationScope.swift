@@ -31,7 +31,7 @@ import Hummingbird
 /// }
 /// ```
 ///
-/// Apply with ``Sequence/filter(scope:identity:request:)`` in a collection handler:
+/// Apply with `filter(scope:identity:request:)` in a collection handler:
 ///
 /// ```swift
 /// func list(_ request: Request, context: Context) async throws -> [DocumentResponse] {
