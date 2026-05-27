@@ -105,7 +105,10 @@ public struct SessionMiddleware<Context: SessionRequestContext>: RouterMiddlewar
         var ttl: Duration? = nil
         var removeSession = false
         do {
-            (originalSessionData, ttl) = try await self.sessionStorage.loadWithTTL(request: request)
+            if let session = try await self.sessionStorage.loadWithTTL(request: request) {
+                originalSessionData = session.session
+                ttl = session.ttl
+            }
         } catch let error as SessionStorage<Context.Session>.Error where error == .sessionInvalidType {
             context.logger.trace("Failed to convert session data")
             removeSession = true

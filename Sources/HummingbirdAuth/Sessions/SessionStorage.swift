@@ -187,15 +187,17 @@ public struct SessionStorage<SessionType: Codable>: Sendable {
 
     /// load session and time to live
     @inlinable
-    public func loadWithTTL(request: Request) async throws -> (session: SessionType?, ttl: Duration?) {
-        guard let sessionId = getId(request: request) else { return (nil, nil) }
+    public func loadWithTTL(request: Request) async throws -> (session: SessionType, ttl: Duration?)? {
+        guard let sessionId = getId(request: request) else { return nil }
         do {
             // prefix with key prefix
-            let (session, ttl) = try await self.storage.getWithTTL(
+            if let (session, ttl) = try await self.storage.getWithTTL(
                 key: "\(self.configuration.keyPrefix)\(sessionId)",
                 as: SessionType.self
-            )
-            return (session, ttl)
+            ) {
+                return (session, ttl)
+            }
+            return nil
         } catch let error as PersistError where error == .invalidConversion {
             throw Error.sessionInvalidType
         }
