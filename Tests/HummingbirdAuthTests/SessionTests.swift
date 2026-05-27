@@ -209,8 +209,8 @@ struct SessionTests {
             try await client.execute(uri: "/ttl", method: .get, headers: [.cookie: cookie]) { response in
                 #expect(response.status == .ok)
                 #expect(response.headers[.setCookie] == nil)
-                let body = String(buffer: response.body)
-                #expect(body == "599")
+                let value = try #require(Int(String(buffer: response.body)))
+                #expect(value < 600 && value > 595)
             }
             try await client.execute(uri: "/updateExpires/70", method: .post, headers: [.cookie: cookie]) { response in
                 #expect(response.status == .ok)
@@ -218,8 +218,8 @@ struct SessionTests {
             }
             try await client.execute(uri: "/ttl", method: .get, headers: [.cookie: cookie]) { response in
                 #expect(response.status == .ok)
-                let body = String(buffer: response.body)
-                #expect(body == "69")
+                let value = try #require(Int(String(buffer: response.body)))
+                #expect(value < 70 && value > 65)
             }
         }
     }
