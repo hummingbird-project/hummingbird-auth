@@ -102,9 +102,10 @@ public struct SessionMiddleware<Context: SessionRequestContext>: RouterMiddlewar
     ///  Session Middleware handler
     public func handle(_ request: Request, context: Context, next: (Request, Context) async throws -> Response) async throws -> Response {
         var originalSessionData: Context.Session? = nil
+        var ttl: Duration? = nil
         var removeSession = false
         do {
-            originalSessionData = try await self.sessionStorage.load(request: request)
+            (originalSessionData, ttl) = try await self.sessionStorage.loadWithTTL(request: request)
         } catch let error as SessionStorage<Context.Session>.Error where error == .sessionInvalidType {
             context.logger.trace("Failed to convert session data")
             removeSession = true
@@ -114,18 +115,19 @@ public struct SessionMiddleware<Context: SessionRequestContext>: RouterMiddlewar
         if let originalSessionData {
             context.sessions.sessionData = SessionData(
                 value: originalSessionData,
-                expiresIn: nil
+                expiresIn: ttl,
+                edited: []
             )
         }
         var response = try await next(request, context)
         let sessionData = context.sessions.sessionData
         if let sessionData {
-            // if session has been edited then store new session
-            if sessionData.edited {
+            if !sessionData.edited.isEmpty {
                 do {
+                    let expiresIn = sessionData.edited.contains(.expires) ? sessionData.expiresIn : nil
                     if let cookie = try await self.sessionStorage.updateAndCreateCookie(
                         session: sessionData.object,
-                        expiresIn: sessionData.expiresIn,
+                        expiresIn: expiresIn,
                         request: request
                     ) {
                         response.headers[values: .setCookie].append(cookie.description)

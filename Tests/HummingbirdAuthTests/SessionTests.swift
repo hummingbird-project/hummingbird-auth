@@ -131,8 +131,8 @@ struct SessionTests {
             return .ok
         }
         router.post("updateExpires") { request, context -> HTTPResponse.Status in
-            guard let name = request.uri.queryParameters.get("name") else { throw HTTPError(.badRequest) }
-            context.sessions.setSession(.init(name: name), expiresIn: .seconds(600))
+            guard let user = context.sessions.session else { throw HTTPError(.unauthorized) }
+            context.sessions.setSession(user, expiresIn: .seconds(600))
             return .ok
         }
         router.get("name") { _, context -> String in
@@ -156,7 +156,7 @@ struct SessionTests {
                 let buffer = response.body
                 #expect(String(buffer: buffer) == "jane")
             }
-            cookie = try await client.execute(uri: "/updateExpires?name=joan", method: .post, headers: [.cookie: cookie]) { response in
+            cookie = try await client.execute(uri: "/updateExpires", method: .post, headers: [.cookie: cookie]) { response in
                 #expect(response.status == .ok)
                 // if we update the cookie expiration date a set-cookie header should be returned
                 let newCookieHeader = try #require(response.headers[.setCookie])
@@ -170,7 +170,56 @@ struct SessionTests {
             try await client.execute(uri: "/name", method: .get, headers: [.cookie: cookie]) { response in
                 #expect(response.status == .ok)
                 let body = response.body
-                #expect(String(buffer: body) == "joan")
+                #expect(String(buffer: body) == "jane")
+            }
+        }
+    }
+
+    @Test func testSessiontTTL() async throws {
+        struct User: Codable, Sendable {
+            var name: String
+        }
+        let router = Router(context: BasicSessionRequestContext<User, User>.self)
+        let persist = MemoryPersistDriver()
+        router.add(middleware: SessionMiddleware(storage: persist))
+        router.post("save") { request, context -> HTTPResponse.Status in
+            guard
+                let name = request.uri.queryParameters.get("name")
+            else {
+                throw HTTPError(.badRequest)
+            }
+            context.sessions.setSession(User(name: name), expiresIn: .seconds(600))
+            return .ok
+        }
+        router.get("ttl") { request, context in
+            context.sessions.withLockedSession { $0.map { String($0.expiresIn?.components.seconds ?? -1) } ?? "No-session" }
+        }
+        router.post("updateExpires/{expire}") { request, context -> HTTPResponse.Status in
+            let expiresIn = try context.parameters.require("expire", as: Int.self)
+            context.sessions.withLockedSession { $0?.expiresIn = .seconds(expiresIn) }
+            return .ok
+        }
+        let app = Application(responder: router.buildResponder())
+
+        try await app.test(.router) { client in
+            let cookie = try await client.execute(uri: "/save?name=john", method: .post) { response -> String in
+                #expect(response.status == .ok)
+                return try #require(response.headers[.setCookie])
+            }
+            try await client.execute(uri: "/ttl", method: .get, headers: [.cookie: cookie]) { response in
+                #expect(response.status == .ok)
+                #expect(response.headers[.setCookie] == nil)
+                let body = String(buffer: response.body)
+                #expect(body == "599")
+            }
+            try await client.execute(uri: "/updateExpires/70", method: .post, headers: [.cookie: cookie]) { response in
+                #expect(response.status == .ok)
+                #expect(response.headers[.setCookie] != nil)
+            }
+            try await client.execute(uri: "/ttl", method: .get, headers: [.cookie: cookie]) { response in
+                #expect(response.status == .ok)
+                let body = String(buffer: response.body)
+                #expect(body == "69")
             }
         }
     }
