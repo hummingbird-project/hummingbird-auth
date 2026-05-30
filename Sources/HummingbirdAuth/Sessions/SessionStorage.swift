@@ -70,7 +70,9 @@ public struct SessionStorage<SessionType: Codable>: Sendable {
         public static var sessionInvalidType: Self { .init(.sessionInvalidType) }
     }
 
+    @usableFromInline
     let configuration: SessionStorageConfiguration
+    @usableFromInline
     let storage: any PersistDriver
 
     /// Initialize session storage
@@ -87,6 +89,7 @@ public struct SessionStorage<SessionType: Codable>: Sendable {
     ///   - storage: Session cookie storage
     ///   - sessionCookieParameters: Session cookie parameters
     @available(*, deprecated, renamed: "init(_:configuration:)")
+    @inlinable
     public init(
         _ storage: any PersistDriver,
         sessionCookieParameters: SessionCookieParameters
@@ -99,6 +102,7 @@ public struct SessionStorage<SessionType: Codable>: Sendable {
     /// - Parameters:
     ///   - storage: Session cookie storage
     ///   - configuration: Session storage configuration
+    @inlinable
     public init(
         _ storage: any PersistDriver,
         configuration: SessionStorageConfiguration
@@ -121,6 +125,7 @@ public struct SessionStorage<SessionType: Codable>: Sendable {
     /// ```
     /// If you know a session already exists it is preferable to use
     /// ``SessionStorage/update(session:expiresIn:request:)``.
+    @inlinable
     public func save(session: SessionType, expiresIn: Duration) async throws -> Cookie {
         let sessionId = Self.createSessionId()
         // prefix with key prefix
@@ -135,6 +140,7 @@ public struct SessionStorage<SessionType: Codable>: Sendable {
     /// update existing session
     ///
     /// If session does not exist then a `sessionDoesNotExist` error will be thrown
+    @inlinable
     public func update(session: SessionType, expiresIn: Duration?, request: Request) async throws {
         guard let sessionId = self.getId(request: request) else {
             throw Error.sessionDoesNotExist
@@ -165,6 +171,7 @@ public struct SessionStorage<SessionType: Codable>: Sendable {
     }
 
     /// load session
+    @inlinable
     public func load(request: Request) async throws -> SessionType? {
         guard let sessionId = getId(request: request) else { return nil }
         do {
@@ -178,9 +185,28 @@ public struct SessionStorage<SessionType: Codable>: Sendable {
         }
     }
 
+    /// load session and time to live
+    @inlinable
+    public func loadWithTTL(request: Request) async throws -> (session: SessionType, ttl: Duration?)? {
+        guard let sessionId = getId(request: request) else { return nil }
+        do {
+            // prefix with key prefix
+            if let (session, ttl) = try await self.storage.getWithTTL(
+                key: "\(self.configuration.keyPrefix)\(sessionId)",
+                as: SessionType.self
+            ) {
+                return (session, ttl)
+            }
+            return nil
+        } catch let error as PersistError where error == .invalidConversion {
+            throw Error.sessionInvalidType
+        }
+    }
+
     /// Delete session
     /// - Parameter request: Request session is attached to
     /// - Returns: Expired cookie
+    @inlinable
     public func delete(request: Request) async throws -> Cookie {
         guard let sessionId = getId(request: request) else {
             throw Error.sessionDoesNotExist
@@ -193,17 +219,20 @@ public struct SessionStorage<SessionType: Codable>: Sendable {
     }
 
     /// Get session id gets id from request
+    @inlinable
     public func getId(request: Request) -> String? {
         guard let sessionCookie = request.cookies[self.configuration.sessionCookieParameters.name]?.value else { return nil }
         return String(sessionCookie)
     }
 
     /// create a session id
+    @usableFromInline
     static func createSessionId() -> String {
         let bytes: [UInt8] = (0..<32).map { _ in UInt8.random(in: 0...255) }
         return Base64.encodeToString(bytes: bytes)
     }
 
+    @usableFromInline
     func createSessionCookie(sessionId: String, expiresIn: Duration) -> Cookie {
         // accuracy of expires value in cookie only needs to be seconds
         let expires = Date.now + TimeInterval(expiresIn.components.seconds)

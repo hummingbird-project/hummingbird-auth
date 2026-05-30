@@ -14,16 +14,38 @@ import NIOConcurrencyHelpers
 @dynamicMemberLookup
 public struct SessionData<Session: Sendable & Codable>: Codable, Sendable {
     @usableFromInline
+    struct EditedState: OptionSet, Sendable {
+        @usableFromInline
+        var rawValue: UInt8
+        @usableFromInline
+        init(rawValue: UInt8) {
+            self.rawValue = rawValue
+        }
+        @usableFromInline
+        static var object: Self { .init(rawValue: 1 << 0) }
+        @usableFromInline
+        static var expires: Self { .init(rawValue: 1 << 1) }
+    }
+    @usableFromInline
     var object: Session
     @usableFromInline
-    var edited: Bool
+    var edited: EditedState
     /// When session will expire
-    public var expiresIn: Duration?
+    public var expiresIn: Duration? {
+        didSet { self.edited.insert(.expires) }
+    }
 
     @usableFromInline
     init(value: Session, expiresIn: Duration?) {
         self.object = value
-        self.edited = true
+        self.edited = expiresIn != nil ? [.object, .expires] : [.object]
+        self.expiresIn = expiresIn
+    }
+
+    @usableFromInline
+    init(value: Session, expiresIn: Duration?, edited: EditedState) {
+        self.object = value
+        self.edited = edited
         self.expiresIn = expiresIn
     }
 
@@ -31,7 +53,7 @@ public struct SessionData<Session: Sendable & Codable>: Codable, Sendable {
     public init(from decoder: any Decoder) throws {
         let container = try decoder.singleValueContainer()
         self.object = try container.decode(Session.self)
-        self.edited = false
+        self.edited = []
         self.expiresIn = nil
     }
 
@@ -49,7 +71,7 @@ public struct SessionData<Session: Sendable & Codable>: Codable, Sendable {
         }
         set {
             self.object[keyPath: keyPath] = newValue
-            self.edited = true
+            self.edited.insert(.object)
         }
     }
 }
