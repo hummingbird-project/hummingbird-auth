@@ -126,21 +126,30 @@ public struct SessionMiddleware<Context: SessionRequestContext>: RouterMiddlewar
         let sessionData = context.sessions.sessionData
         if let sessionData {
             if !sessionData.edited.isEmpty {
-                do {
-                    let expiresIn = sessionData.edited.contains(.expires) ? sessionData.expiresIn : nil
-                    if let cookie = try await self.sessionStorage.updateAndCreateCookie(
-                        session: sessionData.object,
-                        expiresIn: expiresIn,
-                        request: request
-                    ) {
-                        response.headers[values: .setCookie].append(cookie.description)
-                    }
-                } catch let error as SessionStorage<Context.Session>.Error where error == .sessionDoesNotExist {
+                // if session is flagged as new create a new session, otherwise attempt to update existing session
+                if sessionData.edited.contains(.new) {
                     let cookie = try await self.sessionStorage.save(
                         session: sessionData.object,
                         expiresIn: sessionData.expiresIn ?? self.defaultSessionExpiration
                     )
                     response.headers[values: .setCookie].append(cookie.description)
+                } else {
+                    do {
+                        let expiresIn = sessionData.edited.contains(.expires) ? sessionData.expiresIn : nil
+                        if let cookie = try await self.sessionStorage.updateAndCreateCookie(
+                            session: sessionData.object,
+                            expiresIn: expiresIn,
+                            request: request
+                        ) {
+                            response.headers[values: .setCookie].append(cookie.description)
+                        }
+                    } catch let error as SessionStorage<Context.Session>.Error where error == .sessionDoesNotExist {
+                        let cookie = try await self.sessionStorage.save(
+                            session: sessionData.object,
+                            expiresIn: sessionData.expiresIn ?? self.defaultSessionExpiration
+                        )
+                        response.headers[values: .setCookie].append(cookie.description)
+                    }
                 }
             }
         } else if originalSessionData != nil || removeSession {

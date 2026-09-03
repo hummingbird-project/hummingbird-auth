@@ -25,6 +25,8 @@ public struct SessionData<Session: Sendable & Codable>: Codable, Sendable {
         static var object: Self { .init(rawValue: 1 << 0) }
         @usableFromInline
         static var expires: Self { .init(rawValue: 1 << 1) }
+        @usableFromInline
+        static var new: Self { .init(rawValue: 1 << 2) }
     }
     @usableFromInline
     var object: Session
@@ -38,7 +40,7 @@ public struct SessionData<Session: Sendable & Codable>: Codable, Sendable {
     @usableFromInline
     init(value: Session, expiresIn: Duration?) {
         self.object = value
-        self.edited = expiresIn != nil ? [.object, .expires] : [.object]
+        self.edited = expiresIn != nil ? [.object, .expires, .new] : [.object, .new]
         self.expiresIn = expiresIn
     }
 
@@ -89,14 +91,67 @@ public struct SessionContext<Session: Sendable & Codable>: Sendable {
         self._storage = .init(nil)
     }
 
-    ///  Set session data
+    /// Create new session
+    ///
+    /// This creates a new session. A new session id will be generated for this session. If
+    /// you want to update an existing session then use ``updateSession(_:expiresIn:)`` or
+    /// ``withLockedSession(_:)``.
+    ///
     /// - Parameters:
     ///   - session: Session data
     ///   - expiresIn: How long before session data expires
     @inlinable
+    public func createSession(_ session: Session, expiresIn: Duration? = nil) {
+        self._storage.withLockedValue {
+            $0 = .init(value: session, expiresIn: expiresIn)
+        }
+    }
+
+    ///  Set session data
+    ///
+    /// This creates a new session. A new session id will be generated for this session. If
+    /// you want to update an existing session then use ``updateSession(_:expiresIn:)`` or
+    /// ``withLockedSession(_:)``.
+    ///
+    /// - Parameters:
+    ///   - session: Session data
+    ///   - expiresIn: How long before session data expires
+    @inlinable
+    @available(
+        *,
+        deprecated,
+        renamed: "createSession(_:expiresIn:)",
+        message: "Renamed to ``createSession(_:expiresIn:)`` as it defines a clearer intent."
+    )
     public func setSession(_ session: Session, expiresIn: Duration? = nil) {
         self._storage.withLockedValue {
             $0 = .init(value: session, expiresIn: expiresIn)
+        }
+    }
+
+    /// Update data associated with session
+    ///
+    /// If no session exists then the function will return false
+    ///
+    /// - Parameters:
+    ///   - session: Session data
+    ///   - expiresIn: How long before session data expires
+    /// - Returns: Whether a session existed to be updated.
+    @inlinable
+    public func updateSession(_ session: Session, expiresIn: Duration? = nil) -> Bool {
+        self._storage.withLockedValue {
+            if var sessionData = $0 {
+                sessionData.edited.insert(.object)
+                sessionData.object = session
+                if let expiresIn {
+                    sessionData.expiresIn = expiresIn
+                    sessionData.edited.insert(.expires)
+                }
+                $0 = sessionData
+                return true
+            } else {
+                return false
+            }
         }
     }
 

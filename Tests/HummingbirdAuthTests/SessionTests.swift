@@ -39,7 +39,7 @@ struct SessionTests {
             SessionMiddleware(storage: persist)
         }
         router.put("session") { _, context -> Response in
-            context.sessions.setSession(TestUserRepository.testSessionId)
+            context.sessions.createSession(TestUserRepository.testSessionId)
             return .init(status: .ok)
         }
         router.group()
@@ -77,7 +77,7 @@ struct SessionTests {
             SessionMiddleware(storage: persist)
         }
         router.put("session") { _, context -> HTTPResponse.Status in
-            context.sessions.setSession(.init(userID: "Adam"))
+            context.sessions.createSession(.init(userID: "Adam"))
             return .ok
         }
         router.group()
@@ -120,19 +120,16 @@ struct SessionTests {
             else {
                 throw HTTPError(.badRequest)
             }
-            context.sessions.setSession(User(name: name), expiresIn: .seconds(600))
+            context.sessions.createSession(User(name: name), expiresIn: .seconds(600))
             return .ok
         }
         router.post("update") { request, context -> HTTPResponse.Status in
             guard let name = request.uri.queryParameters.get("name") else { throw HTTPError(.badRequest) }
-            context.sessions.withLockedSession { session in
-                session?.name = name
-            }
+            guard context.sessions.updateSession(User(name: name)) else { throw HTTPError(.badRequest) }
             return .ok
         }
         router.post("updateExpires") { request, context -> HTTPResponse.Status in
-            guard let user = context.sessions.session else { throw HTTPError(.unauthorized) }
-            context.sessions.setSession(user, expiresIn: .seconds(600))
+            context.sessions.withLockedSession { $0?.expiresIn = .seconds(600) }
             return .ok
         }
         router.get("name") { _, context -> String in
@@ -188,7 +185,7 @@ struct SessionTests {
             else {
                 throw HTTPError(.badRequest)
             }
-            context.sessions.setSession(User(name: name), expiresIn: .seconds(600))
+            context.sessions.createSession(User(name: name), expiresIn: .seconds(600))
             return .ok
         }
         router.get("ttl") { request, context in
@@ -234,7 +231,7 @@ struct SessionTests {
         router.add(middleware: SessionMiddleware(storage: persist))
         router.post("login") { request, context -> HTTPResponse.Status in
             guard let name = request.uri.queryParameters.get("name") else { throw HTTPError(.badRequest) }
-            context.sessions.setSession(User(name: name), expiresIn: .seconds(600))
+            context.sessions.createSession(User(name: name), expiresIn: .seconds(600))
             return .ok
         }
         router.post("logout") { _, context -> HTTPResponse.Status in
@@ -295,7 +292,7 @@ struct SessionTests {
             else {
                 throw HTTPError(.badRequest)
             }
-            context.sessions.setSession(User(name: name), expiresIn: .seconds(600))
+            context.sessions.createSession(User(name: name), expiresIn: .seconds(600))
             return .ok
         }
         let app = Application(responder: router.buildResponder())
@@ -332,7 +329,7 @@ struct SessionTests {
             guard let name = request.uri.queryParameters.get("name") else {
                 throw HTTPError(.badRequest)
             }
-            context.sessions.setSession(User(name: name), expiresIn: .seconds(600))
+            context.sessions.createSession(User(name: name), expiresIn: .seconds(600))
             return .ok
         }
         let app = Application(responder: router.buildResponder())
@@ -371,6 +368,126 @@ struct SessionTests {
                 let cookie = Cookie(from: setCookieHeader[...])
                 let expires = try #require(cookie?.expires)
                 #expect(expires <= .now)
+            }
+        }
+    }
+
+    /// Test an attacker cannot define the session id before a user logs in
+    @Test func testSessionFixation() async throws {
+        struct User: Sendable {
+            let id: UUID
+            let name: String
+
+            init(name: String) {
+                self.id = .init()
+                self.name = name
+            }
+        }
+
+        struct TestUserRepository: UserSessionRepository {
+            func getUser(from id: UUID, context: UserRepositoryContext) async throws -> User? {
+                self.users.first { $0.id == id }
+            }
+            func getUser(named name: String) async throws -> User? {
+                self.users.first { $0.name == name }
+            }
+            let users: [User] = [
+                User(name: "adam"),
+                User(name: "joannis"),
+            ]
+        }
+        let persist = MemoryPersistDriver()
+
+        let userRepository = TestUserRepository()
+        let router = Router(context: BasicSessionRequestContext<UUID, User>.self)
+        router.addMiddleware {
+            SessionMiddleware(storage: persist)
+        }
+        router.post("user/login") { request, context -> Response in
+            let userName = try request.uri.queryParameters.require("name")
+            guard let user = try await userRepository.getUser(named: userName) else {
+                throw HTTPError(.unauthorized)
+            }
+            context.sessions.createSession(user.id)
+            return .init(status: .ok)
+        }
+        router.group()
+            .add(middleware: SessionAuthenticator(users: userRepository))
+            .get("/user") { _, context -> String in
+                let identity = try context.requireIdentity()
+                return identity.name
+            }
+        let app = Application(responder: router.buildResponder())
+
+        try await app.test(.router) { client in
+            try await client.execute(uri: "/user/login?name=adam", method: .post, headers: [.cookie: "SESSION_ID=fake-id"]) { response in
+                #expect(response.status == .ok)
+            }
+            try await client.execute(uri: "/user", method: .get, headers: [.cookie: "SESSION_ID=fake-id"]) { response in
+                #expect(response.status == .unauthorized)
+            }
+        }
+    }
+
+    /// Test the session id is not persisted between login sessions
+    @Test func testSessionFixation2() async throws {
+        struct User: Sendable {
+            let id: UUID
+            let name: String
+
+            init(name: String) {
+                self.id = .init()
+                self.name = name
+            }
+        }
+
+        struct TestUserRepository: UserSessionRepository {
+            func getUser(from id: UUID, context: UserRepositoryContext) async throws -> User? {
+                self.users.first { $0.id == id }
+            }
+            func getUser(named name: String) async throws -> User? {
+                self.users.first { $0.name == name }
+            }
+            let users: [User] = [
+                User(name: "adam"),
+                User(name: "joannis"),
+            ]
+        }
+        let persist = MemoryPersistDriver()
+
+        let userRepository = TestUserRepository()
+        let router = Router(context: BasicSessionRequestContext<UUID, User>.self)
+        router.addMiddleware {
+            SessionMiddleware(storage: persist)
+        }
+        router.post("user/login") { request, context -> Response in
+            let userName = try request.uri.queryParameters.require("name")
+            guard let user = try await userRepository.getUser(named: userName) else {
+                throw HTTPError(.unauthorized)
+            }
+            context.sessions.createSession(user.id)
+            return .init(status: .ok)
+        }
+        router.group()
+            .add(middleware: SessionAuthenticator(users: userRepository))
+            .get("/user") { _, context -> String in
+                let identity = try context.requireIdentity()
+                return identity.name
+            }
+        let app = Application(responder: router.buildResponder())
+
+        try await app.test(.router) { client in
+            let responseCookies = try await client.execute(uri: "/user/login?name=adam", method: .post) { response in
+                #expect(response.status == .ok)
+                return response.headers[.setCookie]
+            }
+            let cookies = try #require(responseCookies)
+            _ = try await client.execute(uri: "/user/login?name=joannis", method: .post, headers: [.cookie: cookies]) { response in
+                #expect(response.status == .ok)
+            }
+            try await client.execute(uri: "/user", method: .get, headers: [.cookie: cookies]) { response in
+                #expect(response.status == .ok)
+                #expect(String(buffer: response.body) == "adam")
             }
         }
     }
