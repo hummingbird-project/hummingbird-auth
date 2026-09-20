@@ -10,6 +10,7 @@ let package = Package(
         .library(name: "HummingbirdAuth", targets: ["HummingbirdAuth"]),
         .library(name: "HummingbirdBasicAuth", targets: ["HummingbirdBasicAuth"]),
         .library(name: "HummingbirdBcrypt", targets: ["HummingbirdBcrypt"]),
+        .library(name: "HummingbirdOIDC", targets: ["HummingbirdOIDC"]),
         .library(name: "HummingbirdOTP", targets: ["HummingbirdOTP"]),
         .library(name: "HummingbirdAuthTesting", targets: ["HummingbirdAuthTesting"]),
     ],
@@ -18,6 +19,8 @@ let package = Package(
         .package(url: "https://github.com/apple/swift-crypto.git", "1.0.0"..<"6.0.0"),
         .package(url: "https://github.com/apple/swift-nio.git", from: "2.100.0"),
         .package(url: "https://github.com/swift-extras/swift-extras-base64.git", from: "1.0.0"),
+        .package(url: "https://github.com/vapor/jwt-kit.git", from: "5.0.0"),
+        .package(url: "https://github.com/swift-server/async-http-client.git", from: "1.6.0"),
     ],
     targets: [
         .target(
@@ -42,6 +45,17 @@ let package = Package(
             ]
         ),
         .target(
+            name: "HummingbirdOIDC",
+            dependencies: [
+                .byName(name: "HummingbirdAuth"),
+                .product(name: "Hummingbird", package: "hummingbird"),
+                .product(name: "Crypto", package: "swift-crypto"),
+                .product(name: "JWTKit", package: "jwt-kit"),
+                .product(name: "AsyncHTTPClient", package: "async-http-client"),
+                .product(name: "NIOFoundationCompat", package: "swift-nio"),
+            ]
+        ),
+        .target(
             name: "HummingbirdOTP",
             dependencies: [
                 .product(name: "Crypto", package: "swift-crypto"),
@@ -62,10 +76,13 @@ let package = Package(
                 .byName(name: "HummingbirdAuth"),
                 .byName(name: "HummingbirdBasicAuth"),
                 .byName(name: "HummingbirdBcrypt"),
+                .byName(name: "HummingbirdOIDC"),
                 .byName(name: "HummingbirdOTP"),
                 .byName(name: "HummingbirdAuthTesting"),
                 .product(name: "HummingbirdTesting", package: "hummingbird"),
                 .product(name: "NIOPosix", package: "swift-nio"),
+                .product(name: "JWTKit", package: "jwt-kit"),
+                .product(name: "AsyncHTTPClient", package: "async-http-client"),
             ]
         ),
     ]
