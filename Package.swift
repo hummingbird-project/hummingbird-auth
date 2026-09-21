@@ -1,4 +1,4 @@
-// swift-tools-version:5.9
+// swift-tools-version:6.2
 // The swift-tools-version declares the minimum version of Swift required to build this package.
 
 import PackageDescription
@@ -14,7 +14,7 @@ let package = Package(
         .library(name: "HummingbirdAuthTesting", targets: ["HummingbirdAuthTesting"]),
     ],
     dependencies: [
-        .package(url: "https://github.com/hummingbird-project/hummingbird.git", from: "2.25.0"),
+        .package(url: "https://github.com/hummingbird-project/hummingbird.git", from: "2.25.0", traits: []),
         .package(url: "https://github.com/apple/swift-crypto.git", "1.0.0"..<"6.0.0"),
         .package(url: "https://github.com/apple/swift-nio.git", from: "2.100.0"),
         .package(url: "https://github.com/swift-extras/swift-extras-base64.git", from: "1.0.0"),
