@@ -58,6 +58,7 @@ let package = Package(
         .target(
             name: "HummingbirdOTP",
             dependencies: [
+                .byName(name: "HummingbirdAuth"),
                 .product(name: "Crypto", package: "swift-crypto"),
                 .product(name: "ExtrasBase64", package: "swift-extras-base64"),
             ],
