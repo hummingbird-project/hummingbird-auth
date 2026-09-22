@@ -8,7 +8,12 @@
 
 import Crypto
 import ExtrasBase64
-import Foundation
+
+#if canImport(FoundationEssentials)
+public import FoundationEssentials
+#else
+public import Foundation
+#endif
 
 /// HashFunction used in OTP generation
 public enum OTPHashFunction: String, Sendable {

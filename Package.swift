@@ -3,6 +3,17 @@
 
 import PackageDescription
 
+var swiftSettings: [SwiftSetting] = [
+    // https://github.com/apple/swift-evolution/blob/main/proposals/0335-existential-any.md
+    .enableUpcomingFeature("ExistentialAny"),
+
+    // https://github.com/swiftlang/swift-evolution/blob/main/proposals/0444-member-import-visibility.md
+    .enableUpcomingFeature("MemberImportVisibility"),
+
+    // https://github.com/swiftlang/swift-evolution/blob/main/proposals/0409-access-level-on-imports.md
+    .enableUpcomingFeature("InternalImportsByDefault"),
+]
+
 let package = Package(
     name: "hummingbird-auth",
     platforms: [.macOS(.v14), .iOS(.v17), .tvOS(.v17)],
@@ -25,7 +36,8 @@ let package = Package(
             dependencies: [
                 .product(name: "Hummingbird", package: "hummingbird"),
                 .product(name: "ExtrasBase64", package: "swift-extras-base64"),
-            ]
+            ],
+            swiftSettings: swiftSettings
         ),
         .target(
             name: "HummingbirdBasicAuth",
@@ -33,27 +45,31 @@ let package = Package(
                 .byName(name: "HummingbirdAuth"),
                 .byName(name: "HummingbirdBcrypt"),
                 .product(name: "Hummingbird", package: "hummingbird"),
-            ]
+            ],
+            swiftSettings: swiftSettings
         ),
         .target(
             name: "HummingbirdBcrypt",
             dependencies: [
                 .byName(name: "CBcrypt")
-            ]
+            ],
+            swiftSettings: swiftSettings
         ),
         .target(
             name: "HummingbirdOTP",
             dependencies: [
                 .product(name: "Crypto", package: "swift-crypto"),
                 .product(name: "ExtrasBase64", package: "swift-extras-base64"),
-            ]
+            ],
+            swiftSettings: swiftSettings
         ),
         .target(
             name: "HummingbirdAuthTesting",
             dependencies: [
                 .byName(name: "HummingbirdAuth"),
                 .product(name: "HummingbirdTesting", package: "hummingbird"),
-            ]
+            ],
+            swiftSettings: swiftSettings
         ),
         .target(name: "CBcrypt", dependencies: []),
         .testTarget(
@@ -66,7 +82,8 @@ let package = Package(
                 .byName(name: "HummingbirdAuthTesting"),
                 .product(name: "HummingbirdTesting", package: "hummingbird"),
                 .product(name: "NIOPosix", package: "swift-nio"),
-            ]
+            ],
+            swiftSettings: swiftSettings
         ),
     ]
 )

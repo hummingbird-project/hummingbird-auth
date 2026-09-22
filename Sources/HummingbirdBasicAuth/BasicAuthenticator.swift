@@ -6,8 +6,8 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-import Hummingbird
-import HummingbirdAuth
+public import Hummingbird
+public import HummingbirdAuth
 
 /// Basic password authenticator
 ///

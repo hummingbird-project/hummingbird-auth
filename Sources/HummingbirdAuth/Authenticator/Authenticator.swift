@@ -6,7 +6,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-import Hummingbird
+public import Hummingbird
 import NIOCore
 
 /// Protocol for a middleware that checks if a request is authenticated.
