@@ -6,7 +6,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-import Hummingbird
+public import Hummingbird
 
 /// Middleware returning 401 for unauthenticated requests
 public struct IsAuthenticatedMiddleware<Context: AuthRequestContext>: RouterMiddleware {

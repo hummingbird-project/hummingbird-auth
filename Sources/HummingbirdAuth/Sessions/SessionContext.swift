@@ -6,9 +6,14 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
+public import Hummingbird
+public import NIOConcurrencyHelpers
+
+#if canImport(FoundationEssentials)
+import FoundationEssentials
+#else
 import Foundation
-import Hummingbird
-import NIOConcurrencyHelpers
+#endif
 
 /// Session data
 @dynamicMemberLookup

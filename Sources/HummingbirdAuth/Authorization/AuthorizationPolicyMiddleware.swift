@@ -6,7 +6,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-import Hummingbird
+public import Hummingbird
 
 /// Middleware that enforces an ``AuthorizationPolicy`` on every request it handles.
 ///

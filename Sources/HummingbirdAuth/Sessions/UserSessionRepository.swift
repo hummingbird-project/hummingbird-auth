@@ -7,7 +7,7 @@
 //
 
 import Hummingbird
-import Logging
+public import Logging
 
 /// Context object supplied when requesting user
 public struct UserRepositoryContext {

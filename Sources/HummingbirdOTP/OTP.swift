@@ -8,7 +8,13 @@
 
 import Crypto
 import ExtrasBase64
-import Foundation
+import HummingbirdAuth
+
+#if canImport(FoundationEssentials)
+public import FoundationEssentials
+#else
+public import Foundation
+#endif
 
 /// HashFunction used in OTP generation
 public enum OTPHashFunction: String, Sendable {
@@ -44,8 +50,8 @@ extension OTP {
     ///   - parameters: additional parameters
     func createAuthenticatorURL(algorithmName: String, label: String, issuer: String?, parameters: [String: String]) -> String {
         let base32 = String(base32Encoding: secret.utf8, options: .omitPaddingCharacter)
-        let label = label.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? label
-        let issuer = issuer?.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? issuer
+        let label = label.addingPercentEncoding(forURLComponent: .path)
+        let issuer = issuer?.addingPercentEncoding(forURLComponent: .query)
         var url = "otpauth://\(algorithmName)/\(label)?secret=\(base32)"
         if let issuer {
             url += "&issuer=\(issuer)"

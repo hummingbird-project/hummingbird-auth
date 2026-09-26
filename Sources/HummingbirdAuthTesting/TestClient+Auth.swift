@@ -7,8 +7,8 @@
 //
 
 import ExtrasBase64
-import Hummingbird
-import HummingbirdTesting
+public import Hummingbird
+public import HummingbirdTesting
 
 /// Used to generate various authentication types for Testing framework
 public struct TestAuthentication: Equatable {

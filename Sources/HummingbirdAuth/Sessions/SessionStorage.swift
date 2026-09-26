@@ -7,8 +7,13 @@
 //
 
 import ExtrasBase64
+public import Hummingbird
+
+#if canImport(FoundationEssentials)
+import FoundationEssentials
+#else
 import Foundation
-import Hummingbird
+#endif
 
 /// Session cookie parameters
 public struct SessionCookieParameters: Sendable {
@@ -51,7 +56,7 @@ public struct SessionStorageConfiguration: Sendable {
 }
 
 /// Stores session data
-public struct SessionStorage<SessionType: Codable>: Sendable {
+public struct SessionStorage<SessionType: Codable & Sendable>: Sendable {
     /// SessionStorage Errors
     public struct Error: Swift.Error, Equatable {
         enum ErrorType {

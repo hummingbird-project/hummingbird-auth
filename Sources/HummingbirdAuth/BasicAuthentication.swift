@@ -7,8 +7,7 @@
 //
 
 import ExtrasBase64
-import HTTPTypes
-import Hummingbird
+public import HTTPTypes
 
 /// Basic authentication information extracted from request header "Authorization"
 public struct BasicAuthentication: Sendable {

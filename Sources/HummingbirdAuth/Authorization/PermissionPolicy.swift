@@ -6,7 +6,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-import Hummingbird
+public import Hummingbird
 
 /// A type whose instances carry a collection of fine-grained permissions.
 ///

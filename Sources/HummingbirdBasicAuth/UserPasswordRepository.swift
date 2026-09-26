@@ -7,7 +7,7 @@
 //
 
 import Hummingbird
-import HummingbirdAuth
+public import HummingbirdAuth
 import Logging
 
 /// Protocol for a password authenticatable object

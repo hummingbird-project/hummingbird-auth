@@ -6,7 +6,8 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-import Hummingbird
+public import Hummingbird
+import Logging
 
 /// SessionStorage configuration
 public struct SessionMiddlewareConfiguration: Sendable {

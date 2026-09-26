@@ -6,8 +6,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-import HTTPTypes
-import Hummingbird
+public import HTTPTypes
 
 /// Bearer authentication information extracted from request header "Authorization"
 public struct BearerAuthentication: Sendable {

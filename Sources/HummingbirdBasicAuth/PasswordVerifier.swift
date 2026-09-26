@@ -6,8 +6,8 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-import HummingbirdBcrypt
-import NIOPosix
+public import HummingbirdBcrypt
+public import NIOPosix
 
 /// Protocol for password verifier
 public protocol PasswordHashVerifier: Sendable {
